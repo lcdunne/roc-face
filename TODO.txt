@@ -1,0 +1,3 @@
+- Work on the double dual-process model
+- Fix the model labeling (__modelname__)
+- Write tests

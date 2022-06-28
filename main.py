@@ -7,26 +7,26 @@ import legacy_chi2 as legacy_stats
 
 np.random.seed(42)
 
-class BaseModel:
-    def __init__(self, signal, noise):
-        self.signal = signal
-        self.noise = noise
-        self._set_criterion_parameters()
+# class BaseModel:
+#     def __init__(self, signal, noise):
+#         self.signal = signal
+#         self.noise = noise
+#         self._set_criterion_parameters()
 
-    def _set_criterion_parameters(self):
-        if hasattr(self, 'criteria') and self.criteria:
-            self.criteria = np.random.normal(0, 1, len(self.signal))
-        else:
-            self.criteria = False
+#     def _set_criterion_parameters(self):
+#         if hasattr(self, 'criteria') and self.criteria:
+#             self.criteria = np.random.normal(0, 1, len(self.signal))
+#         else:
+#             self.criteria = False
         
 
 
-class Model(BaseModel):
-    def __init__(self, signal, noise):
-        self.parameters = dict(d=0, R=0.1)
-        self.constraints = dict(d=(None, None), r=(0, 1))
-        self.criteria = True
-        super().__init__(signal, noise)
+# class Model(BaseModel):
+#     def __init__(self, signal, noise):
+#         self.parameters = dict(d=0, R=0.1)
+#         self.constraints = dict(d=(None, None), r=(0, 1))
+#         self.criteria = True
+#         super().__init__(signal, noise)
 
 #%% utils
 def accumulate(arr):
@@ -128,14 +128,12 @@ class BaseModel:
     def __init__(self, signal, noise):
         self.signal = signal
         self.noise = noise
-
         if not arrays_equal_length(signal, noise):
             raise ValueError(
                 "Expected signal and noise to have the same length. "
                 f"Signal was length {len(signal)}; "
                 f"noise was length {len(noise)}."                
             )
-
         self.p_signal = compute_proportions(self.signal)
         self.p_noise = compute_proportions(self.noise)
         self._non_c_labels = list(self.parameters.keys())
@@ -145,7 +143,10 @@ class BaseModel:
             self.criteria = np.random.rand(len(self.p_signal))
 
         self.opt = False
-
+    
+    def model_abbrev(self):
+        return ''.join([i[0] for i in self.__modelname__.split(' ')])
+    
     def __repr__(self):
         return f'<{self.__modelname__}>'
 
@@ -364,6 +365,24 @@ class BaseModel:
         self._compute_expected(**self.fitted_parameters)
 
 #%% Models
+class HighThreshold(BaseModel):
+    __modelname__ = 'High Threshold'
+
+    use_criteria = False
+
+    def __init__(self, signal=None, noise=None):
+        self.parameters = {'R': {'value': 0.999, 'bounds': (0, 1)}}
+        super().__init__(signal, noise)
+
+    def _compute_expected(self, R=None):
+        if self.opt:
+            # If it is optimized, make the line extend from 0 to 1
+            self.model_noise = np.array([0, 1])
+        else:
+            self.model_noise = self.p_noise
+        self.model_signal = (1 - R) * self.model_noise + R
+        return self.model_noise, self.model_signal
+
 class SignalDetection(BaseModel):
     __modelname__ = 'Signal Detection'
 
@@ -394,6 +413,51 @@ class SignalDetection(BaseModel):
         self.model_noise = stats.norm.cdf(-d / 2 - c, scale=1)
         return self.model_noise, self.model_signal
 
+class DualProcess(BaseModel):
+
+    __modelname__ = 'Dual-Process Signal Detection'
+
+    # Should the model use criterion values
+    use_criteria = True
+
+    def __init__(self, signal=None, noise=None, R_noise=False):
+        self.parameters = dict(d=dict(value=0, bounds=(None, None)),
+                               R=dict(value=0, bounds=(0, 1)))
+        
+        if R_noise:
+            self.parameters.update(R_noise=dict(value=0, bounds=(0, 1)))
+
+        self.recollection = None
+        self.familiarity = None
+        super().__init__(signal, noise)
+
+    def _middle(self, x):
+        if len(x) % 2 == 1:
+            return x[int(len(x) / 2)]
+        else:
+            mid_dwn = int(np.floor(len(x) / 2))
+            mid_up = mid_dwn + 1
+            return np.mean([x[mid_dwn], x[mid_up]])
+
+    def _compute_familiarity(self, c, d):
+        return stats.norm.cdf( d / 2 - self._middle(c) )
+
+    def _compute_expected(self, R=None, d=None, c=None, R_noise=None):
+        if self.opt:
+            c = np.linspace(-5, 5, 501)
+            fitted_c = list(self.criteria)
+            self.recollection = R
+            self.familiarity = self._compute_familiarity(fitted_c, d)
+        
+        if R_noise is None:
+            R_noise = 0
+        
+        self.model_noise = (1 - R_noise) * stats.norm.cdf(-d / 2 - c)
+        self.model_signal = R + (1 - R) * stats.norm.cdf(d / 2 - c)
+
+        return self.model_noise, self.model_signal
+
+
 def compare(*models):
     """Compare different models for their fits."""
     y = {'model': [], 'y': []}
@@ -412,8 +476,8 @@ def plot_roc(model, data=False, ax=None):
     ax.set(xlim=(-0.05, 1.05), ylim=(-0.05, 1.05))
     ax.plot([0,1], [0,1], c='k', lw=1, ls='dashed')
     if data:
-        ax.scatter(model.p_noise, model.p_signal)
-    ax.plot(model.expected_noise, model.expected_signal, label=model.__modelname__)
+        ax.scatter(model.p_noise, model.p_signal, zorder=999, c='k', label='data')
+    ax.plot(model.expected_noise, model.expected_signal, label=model.model_abbrev())
     ax.legend()
     return ax
 
@@ -423,19 +487,31 @@ signal = [505, 248, 226, 172, 144, 93]
 # High confidence >...> High confidence "noise"
 noise = [115, 185, 304, 523, 551, 397]
 
+ht = HighThreshold(signal, noise)
 evsd = SignalDetection(signal, noise)
 uvsd = SignalDetection(signal, noise, False)
+dpsd = DualProcess(signal, noise)
+dpsd2 = DualProcess(signal, noise, R_noise=True)
 
+ht.fit('g')
 evsd.fit('g')
 uvsd.fit('g')
+dpsd.fit('g')
+dpsd2.fit('g')
 
 print(
     compare(
+        ht,
         evsd,
         uvsd,
+        dpsd,
+        dpsd2,
     )
 )
 fig, ax = plt.subplots(dpi=100)
-plot_roc(evsd, data=True, ax=ax)
+plot_roc(ht, data=True, ax=ax)
+plot_roc(evsd, ax=ax)
 plot_roc(uvsd, ax=ax)
+plot_roc(dpsd, ax=ax)
+plot_roc(dpsd2, ax=ax)
 plt.show()
