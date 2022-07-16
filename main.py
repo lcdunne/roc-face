@@ -67,6 +67,22 @@ class BaseModel:
     __modelname__ = 'none'
 
     def __init__(self, signal, noise):
+        '''
+        Model instantiation will create...
+        Why not just use a dict with "criteria" as a key and an ordered array...?
+
+        Parameters
+        ----------
+        signal : TYPE
+            DESCRIPTION.
+        noise : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
+        '''
         self.shortname = ''.join([i[0] for i in self.__modelname__.split(' ')])
         self.signal = signal
         self.noise = noise
@@ -97,11 +113,19 @@ class BaseModel:
 
     def objective(self, x0, method='log-likelihood'):
         '''
+        Uses parameters defined in x0 to pass to the theoretical model and compute expected values.
+        
+        These expected values are then assessed in terms of their fit according to the specified method.
+        
         Method must be one of:
             'log-likelihood'
             'legacy log-likelihood'
             'legacy pearson'
             'sse'
+        
+        The result of this fit procedure is a single statistic.
+        
+        The minimization algorithm updates the x0 params until the fit statistic is been minimized.
         '''
         # Get the "observed" counts
         observed_signal = self.acc_signal[:-1]
@@ -165,6 +189,9 @@ class BaseModel:
             'AIC': AIC(self)
         }
         return self.results, self.fitted_parameters
+    
+    def euclidean_misfit(self, ox, oy, ex, ey):
+        pass
 
 class HighThreshold(BaseModel):
     __modelname__ = 'High Threshold'
@@ -188,21 +215,30 @@ class SignalDetection(BaseModel):
     has_criteria = True
 
     def __init__(self, signal, noise, equal_variance=True):
+        # .parameters refers to the INPUT parameters defined for the model. Not the fitted_parameters.
         self.parameters = {'d': 0} # Will be updated with all criterion params on super() call
-        self.parameter_boundaries = [(None, None)] # also updated on super()
+        self.parameter_boundaries = [(None, None)] # also updated on super() to include criteria
         
         if not equal_variance:
             self.__modelname__ = self.__modelname__.replace('Equal', 'Unequal')
+            # Add additional parameter for the signal variance, along with boundary
+            # As per the docs (https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.Bounds.html)...
+            #    ...we can actually just include this as a parameter and fix the bounds equal to 1...
+            #    ... but the issue is that it would appear as an additional parameter and inflate the d.f.
             self.parameters['scale'] = 1
             self.parameter_boundaries.append((1, 100))
         
         super().__init__(signal, noise)
         
     # SDT function to get f_exp
-    def compute_expected(self, d=None, scale=1, criteria=None, full=False):        
+    def compute_expected(self, d=None, scale=1, criteria=None, full=False):
+        # `full` may be unnecessary.
         if criteria is None or full:
             criteria = np.arange(-5, 5, 0.01)
         
         model_signal = stats.norm.cdf(d / 2 - np.array(criteria), scale=scale)
         model_noise = stats.norm.cdf(-d / 2 - np.array(criteria), scale=1)
         return model_noise, model_signal
+
+if __name__ == '__main__':
+    pass
