@@ -63,6 +63,31 @@ def AIC(model=None, LL=None, k=None,):
         k = model.k
     return 2 * k - 2 * np.log(LL)
 
+from dataclasses import dataclass
+
+@dataclass
+class Parameter:
+    name: str
+    initial: int = 0
+    bounds: tuple = (None, None)
+
+class CriterionParameters:
+    prefix: str = 'c'
+
+class Parameter:
+    def __init__(self, name: str, initial: int = 0, bounds: tuple = (None, None)):
+        self.name = name
+        self.initial = initial
+        self.bounds = bounds
+    
+    def __repr__(self):
+        return f"Parameter(name={self.name}, initial={self.initial}, bounds={self.bounds})"
+
+    
+r = Parameter('R', bounds=(0, 1))
+
+        
+
 class BaseModel:
     __modelname__ = 'none'
 
@@ -92,24 +117,75 @@ class BaseModel:
         self.acc_noise = accumulate(self.noise)
         self.p_signal = compute_proportions(self.signal)
         self.p_noise = compute_proportions(self.noise)
-        self.non_c_idx = len(self.parameters) # The index number of x0 at which the criterian begin
-        self.non_c_labels = list(self.parameters.keys())
+        
+        # Since multiple models will have criteria, best to init in parent class
         if self.has_criteria:
-            self.parameters = self.parameters | {f"c{i+1}": 0 for i in range(len(self.signal)-1)}
-            self.parameter_boundaries += [(None, None) for _ in range(len(self.signal)-1)]
-        self.parameter_labels = list(self.parameters.keys())
-        self.k = len(self.parameter_labels)
-        self.x0 = list(self.parameters.values())
+            self.n_criteria = len(self.p_signal)
+            self._criteria = {
+                f"c{i}": {'initial': 0, 'bounds': (None, None)} for i in range(self.n_criteria)
+            }
+            # self.parameters['criteria'] = np.zeros(len(self.signal))
+            # self.criterion_bounds = [(None, None) for _ in range(len(self.signal))]
+            # self.parameters = self.parameters | {f"c{i+1}": 0 for i in range(len(self.signal)-1)}
+            # self.parameter_boundaries += [(None, None) for _ in range(len(self.signal)-1)]
+            self._parameters = self._named_parameters | self._criteria
+        else:
+            # Typically will only be the case for high threshold model
+            self.n_criteria = 0
+            self._parameters = self._named_parameters.copy()
+        
+        # self.parameter_labels = list(self._parameters.keys())
+        # self.k = len(self.parameter_labels)
     
-    def define_model_inputs(self, x0, ignore_criteria=False):
-        # Makes dict to unpack as kwargs to the fit function.
-        model_input = {k: v for k, v in zip(self.parameter_labels, x0[:self.non_c_idx])}
-        if self.has_criteria and not ignore_criteria:
-            model_input['criteria'] = x0[self.non_c_idx:]
-        return model_input
+    @property
+    def initial_parameters(self):
+        return {k: v['initial'] for k, v in self._parameters.items()}
     
-    def get_non_c(self):
-        return {k: v for k, v in self.fitted_parameters.items() if k in self.non_c_labels}
+    @property
+    def fitted_parameters(self):
+        # return {k: v.get('fitted') for k, v in self._parameters.items() if v.get('fitted') is not None}
+        return self._fitted_parameters
+    
+    @property
+    def parameter_labels(self):
+        return list(self._parameters.keys())
+    
+    @property
+    def parameter_boundaries(self):
+        return list({k: v['bounds'] for k, v in self._parameters.items()}.values())
+    
+    @property
+    def n_param(self):
+        return len(self.parameter_labels)
+    
+    @property
+    def initial_input(self):
+        # This is not even a necessary variable - just use it directly as input
+        return list(self.initial_parameters.values())
+    
+    def define_model_inputs(self, labels, values, n_criteria=0):
+        # Must map a flat list like [0.999, 0, 0, 0, 0, 0]
+        # to {'R': 0.999, 'criteria': [0,0,0,0,0]}
+        if n_criteria == 0:
+            return dict(zip(labels, values))        
+        # Number of named i.e. non-criteria parameters
+        n_named = len(labels) - n_criteria
+        return dict(zip(labels[:n_named], values[:n_named])) | {'criteria': values[n_named:]}
+
+    def subset_dict(self, d, withkeys=None):
+        if withkeys is None:
+            return {k: v for k, v in d.items()}
+        return {k: v for k, v in d.items() if k in withkeys}
+    
+    # def define_model_inputs(self, x0, ignore_criteria=False):
+    #     # Makes dict to unpack as kwargs to the fit function.
+    #     model_input = {k: v for k, v in zip(self.parameter_labels, x0[:self.non_c_idx])}
+    #     if self.has_criteria and not ignore_criteria:
+    #         model_input['criteria'] = x0[self.non_c_idx:]
+    #     return model_input
+    
+    # def get_non_c(self):
+    #     return {k: v for k, v in self.fitted_parameters.items() if k in self.non_c_labels}
 
     def objective(self, x0, method='log-likelihood'):
         '''
@@ -131,27 +207,36 @@ class BaseModel:
         observed_signal = self.acc_signal[:-1]
         observed_noise = self.acc_noise[:-1]
         
-        # Define the model inputs
-        model_input = self.define_model_inputs(x0)
+        # Define the model inputs.
+        # Maps from flat list of labels and x0 values to dict accepted by `<model>.compute_expected`
+        model_input = self.define_model_inputs(
+            labels=self.parameter_labels,
+            values=x0, # Not the same as self.x0: this one gets updated
+            n_criteria=self.n_criteria
+        )
         
         # Compute the expected probabilities using the model function
         expected_p_noise, expected_p_signal = self.compute_expected(**model_input)
         
         # Compute the expected counts
+        # TODO: Make this a function because we want to return this as output
         expected_signal = expected_p_signal * self.n_signal
         expected_noise = expected_p_noise * self.n_noise
 
         # Compute the fit statistic given observed and model-expected data
         if method == 'log-likelihood':
+            # TODO: Replace with g
             # Fit using same approach as in spreadsheet
             ll_signal = loglik(O=observed_signal, E=expected_signal, N=self.n_signal)
             ll_noise = loglik(O=observed_noise, E=expected_noise, N=self.n_noise)
             return sum(ll_signal + ll_noise)
+
         elif method == 'sse':
             # Fit using approach from Yonelinas' spreadsheet
             sse_signal = sum_sse(observed_signal, expected_signal)
             sse_noise = sum_sse(observed_noise, expected_noise)
             return sse_signal + sse_noise
+
         elif 'legacy' in method:
             lamb = method.split(' ')[-1] # Gets e.g. 'log-likelihood' (g-test) or 'pearson' (chi-square)
             # Fit using legacy funcs that allow different sums of all counts
@@ -168,38 +253,52 @@ class BaseModel:
             return sum(ll_signal) + sum(ll_noise)
     
     def fit(self, method='log-likelihood'):
+        '''
+        To return:
+            {method: result, success: bool, observed_prob, expected_prob, observed_count, expected_count}
+        '''
         # Run the fit function
         self.optimisation_output = minimize(
             fun=self.objective,
-            x0=self.x0,
+            x0=self.initial_input,
             args=(method),
             bounds=self.parameter_boundaries,
             tol=1e-6
         )
+        # Take the results
         self.x0 = self.optimisation_output.x
-        self.fitted_parameters = {k: v for k, v in zip(self.parameter_labels, self.x0)}
-        # Define the model inputs
-        self.fitted_model_input = self.define_model_inputs(list(self.fitted_parameters.values()))
-        # Compute the expected probabilities using the model function, useful for AIC for example
-        self.expected_p_noise, self.expected_p_signal = self.compute_expected(**self.fitted_model_input)
         
-        self.results = {
-            'fun': self.optimisation_output.fun,
-            'success': self.optimisation_output.success,
-            'AIC': AIC(self)
-        }
-        return self.results, self.fitted_parameters
+        # self.fitted_parameters = {k: v for k, v in zip(self.parameter_labels, self.x0)}
+        # Define the model inputs        
+        self._fitted_parameters = self.define_model_inputs(labels=self.parameter_labels, values=self.x0, n_criteria=self.n_criteria)
+        # Compute the expected probabilities using the model function, useful for AIC for example
+        self.expected_p_noise, self.expected_p_signal = self.compute_expected(**self._fitted_parameters)
+
+        # self.results = {
+        #     'fun': self.optimisation_output.fun,
+        #     'success': self.optimisation_output.success,
+        #     'AIC': AIC(self)
+        # }
+        # return self.results, self.fitted_parameters
+        return self._fitted_parameters
     
     def euclidean_misfit(self, ox, oy, ex, ey):
         pass
+    
+    # @property
+    # def x0(self):
+    #     return [p['initial'] for p in parameters.values()]
+    
+    # @property
+    # def x0_labels(self):
+    #     return list(parameters.keys())
 
 class HighThreshold(BaseModel):
     __modelname__ = 'High Threshold'
     has_criteria = False
 
     def __init__(self, signal, noise):
-        self.parameters = {'R': 0.999}
-        self.parameter_boundaries = [(0, 1)]
+        self._named_parameters = {'R': {'initial': 0.999, 'bounds': (0, 1)}}
         super().__init__(signal, noise)
     
     def compute_expected(self, R, full=False):
@@ -210,14 +309,17 @@ class HighThreshold(BaseModel):
         model_signal = (1 - R) * model_noise + R
         return model_noise, model_signal
 
+
 class SignalDetection(BaseModel):
     __modelname__ = 'Equal Variance Signal Detection'
     has_criteria = True
 
     def __init__(self, signal, noise, equal_variance=True):
         # .parameters refers to the INPUT parameters defined for the model. Not the fitted_parameters.
-        self.parameters = {'d': 0} # Will be updated with all criterion params on super() call
-        self.parameter_boundaries = [(None, None)] # also updated on super() to include criteria
+        # self.parameters = {'d': 0} # Will be updated with all criterion params on super() call
+        # self.parameter_boundaries = [(None, None)] # also updated on super() to include criteria
+        
+        self._named_parameters = {'d': {'initial': 0, 'bounds': (None, None)}}
         
         if not equal_variance:
             self.__modelname__ = self.__modelname__.replace('Equal', 'Unequal')
@@ -225,8 +327,7 @@ class SignalDetection(BaseModel):
             # As per the docs (https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.Bounds.html)...
             #    ...we can actually just include this as a parameter and fix the bounds equal to 1...
             #    ... but the issue is that it would appear as an additional parameter and inflate the d.f.
-            self.parameters['scale'] = 1
-            self.parameter_boundaries.append((1, 100))
+            self._named_parameters['scale'] = {'initial': 1, 'bounds': (1, None)}
         
         super().__init__(signal, noise)
         
@@ -241,4 +342,13 @@ class SignalDetection(BaseModel):
         return model_noise, model_signal
 
 if __name__ == '__main__':
-    pass
+    signal = [505,248,226,172,144,93]
+    noise = [115,185,304,523,551,397]
+    sdt = SignalDetection(signal, noise, equal_variance=False)
+    sdt.fit()
+    print(sdt.optimisation_output)
+    # TODO: There is a lot of junk in the code, needs refining.
+    
+    ht = HighThreshold(signal, noise)
+    ht.fit()
+    print(ht.optimisation_output)
