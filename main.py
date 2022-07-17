@@ -20,11 +20,18 @@ def accumulate(arr):
     return np.cumsum(arr)
 
 def corrected_proportion(a, x, i=0):
+    """Converts an accumulated array to proportions of its total counts.
+    For example, given an array:
+        [1, 2, 3, 4, 5]
+    when accumulated: 
+        [1, 3, 6, 10, 15]
+    the current function will return:
+        [0.067, 0.2, 0.4, 0.67, 1]
+    """
     return (x + i / len(a)) / (max(a) + 1)
 
 def compute_proportions(arr, truncate=True):
     """Accumulates an array and converts it to proportions of its total."""
-    # Corrects for ceiling effects.
     a = accumulate(arr)
     freq = [corrected_proportion(a, x, i) for i, x in enumerate(a, start=1)]
     
@@ -37,6 +44,7 @@ def compute_proportions(arr, truncate=True):
     return np.array(freq)
 
 def plot_roc(signal, noise, ax=None, chance=True, **kwargs):
+    """A utility to plot ROC curves."""
     if ax is None:
         fig, ax = plt.subplots()
     
@@ -50,24 +58,29 @@ def plot_roc(signal, noise, ax=None, chance=True, **kwargs):
 
 # Fitting functions
 def loglik(O, E, N):
-    # G-test (https://en.wikipedia.org/wiki/G-test)
+    """Computes the G-test (https://en.wikipedia.org/wiki/G-test)."""
     with np.errstate(divide='ignore'):
         # ignore infinite value warning & return inf anyway.
         return 2 * O * np.log(O/E) + 2 * (N - O) * np.log((N - O)/(N - E))
 
 def chitest(O, E, N):
+    """Computes Pearson's χ^2 test.
+    Is equivalent to `scipy.stats.power_divergence` with argument 'pearson').
+    """
     return (O - E)**2 / E + ((N-O) - (N-E))**2 / (N-E)
 
 def sum_sse(O, E):
+    """Computes the simple sum of squared errors for the fit."""
     return sum( (O - E)**2 )
 
 def aic(L, k):
+    """Computes Akaike's information criterion."""
     # k: number of estimated parameters in the model
     return 2 * k - 2 * np.log(L)
 
 def auc(x, y):
+    """Computes the area under the ROC curve."""
     return np.trapz(x=x, y=y)
-
 
 class BaseModel:
     __modelname__ = 'none'
