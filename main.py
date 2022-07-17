@@ -286,7 +286,7 @@ class HighThreshold(BaseModel):
         super().__init__(signal, noise)
     
     def __repr__(self):
-        return f"<{sdt.__class__.__name__}: {self.__modelname__}>"
+        return f"<{self.__class__.__name__}: {self.__modelname__}>"
     
     def compute_expected(self, R, full=False):
         if full:
@@ -312,7 +312,7 @@ class SignalDetection(BaseModel):
         super().__init__(signal, noise)
     
     def __repr__(self):
-        return f"<{sdt.__class__.__name__}: {self.__modelname__}>"
+        return f"<{self.__class__.__name__}: {self.__modelname__}>"
 
     # SDT function to get f_exp
     def compute_expected(self, d=None, scale=1, criteria=None):
