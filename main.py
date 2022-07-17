@@ -65,6 +65,9 @@ def aic(L, k):
     # k: number of estimated parameters in the model
     return 2 * k - 2 * np.log(L)
 
+def auc(x, y):
+    return np.trapz(x=x, y=y)
+
 
 class BaseModel:
     __modelname__ = 'none'
@@ -95,6 +98,7 @@ class BaseModel:
         self.acc_noise = accumulate(self.noise)
         self.p_signal = compute_proportions(self.signal)
         self.p_noise = compute_proportions(self.noise)
+        self.auc = auc(x=np.append(self.p_noise, 1), y=np.append(self.p_signal, 1))
         
         # Since multiple models will have criteria, best to init them in this parent class
         if self._has_criteria:
@@ -258,6 +262,11 @@ class BaseModel:
         
         
         # TODO: Define nice results output
+        self.results = {
+            'model': self.__modelname__,
+            method: self.optimisation_output.fun,
+            'aic': self.aic
+        }
         
         return self._fitted_parameters
     
@@ -273,6 +282,7 @@ class HighThreshold(BaseModel):
     def __init__(self, signal, noise):
         self._named_parameters = {'R': {'initial': 0.999, 'bounds': (0, 1)}}
         # TODO: This model actually has 2 parameters, with `g` (guess). Currently self.n_param returns just 1. would be good to fix the compute_expected for this.
+        self.label = ''.join([i[0] for i in self.__modelname__.split()])
         super().__init__(signal, noise)
     
     def __repr__(self):
@@ -314,12 +324,31 @@ class SignalDetection(BaseModel):
         return model_noise, model_signal
 
 if __name__ == '__main__':
+    import matplotlib.pyplot as plt
+    
     signal = [505,248,226,172,144,93]
     noise = [115,185,304,523,551,397]
-    sdt = SignalDetection(signal, noise, equal_variance=True)
-    sdt.fit()
-    print(sdt.optimisation_output)
+    
+    evsd = SignalDetection(signal, noise, equal_variance=True)
+    evsd.fit()
+    print(evsd.optimisation_output)
+    
+    uvsd = SignalDetection(signal, noise, equal_variance=False)
+    uvsd.fit()
+    print(uvsd.optimisation_output)
 
     ht = HighThreshold(signal, noise)
     ht.fit()
     print(ht.optimisation_output)
+    
+    # Plot
+    fig, ax = plt.subplots(dpi=150)
+
+    plot_roc(ht.p_signal, ht.p_noise, ax=ax)
+    
+    ax.plot(*ht.compute_expected(**ht.fitted_parameters), label=ht.label)
+    ax.plot(*evsd.compute_expected(**evsd.fitted_parameters), label=evsd.label)
+    ax.plot(*uvsd.compute_expected(**uvsd.fitted_parameters), label=uvsd.label)
+
+    ax.legend(loc='lower right')
+    plt.show()
