@@ -243,7 +243,6 @@ class BaseModel:
         self.expected_p_noise, self.expected_p_signal = self.compute_expected(
             **self._fitted_parameters
         )
-        # TODO: Define nice results output
         
         # Errors
         self._signal_squared_errors = (self.p_signal - self.expected_p_signal) ** 2
@@ -255,6 +254,10 @@ class BaseModel:
         if any(self.squared_errors==0):
             self.squared_errors = self.squared_errors[self.squared_errors != 0]
         self.aic = aic(L=sum(-np.log(np.sqrt(self.squared_errors))), k=self.n_param)
+        
+        
+        
+        # TODO: Define nice results output
         
         return self._fitted_parameters
     
@@ -276,7 +279,6 @@ class HighThreshold(BaseModel):
         return f"<{sdt.__class__.__name__}: {self.__modelname__}>"
     
     def compute_expected(self, R, full=False):
-        print(full)
         if full:
             model_noise = np.array([0, 1])
         else:
