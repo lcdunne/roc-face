@@ -45,6 +45,7 @@ def plot_roc(signal, noise, ax=None, chance=True, **kwargs):
 
 # Fitting functions
 def loglik(O, E, N):
+    # G-test: 
     with np.errstate(divide='ignore'):
         # ignore infinite value warning & return inf anyway.
         return 2 * O * np.log(O/E) + 2 * (N - O) * np.log((N - O)/(N - E))
@@ -63,30 +64,6 @@ def AIC(model=None, LL=None, k=None,):
         k = model.k
     return 2 * k - 2 * np.log(LL)
 
-from dataclasses import dataclass
-
-@dataclass
-class Parameter:
-    name: str
-    initial: int = 0
-    bounds: tuple = (None, None)
-
-class CriterionParameters:
-    prefix: str = 'c'
-
-class Parameter:
-    def __init__(self, name: str, initial: int = 0, bounds: tuple = (None, None)):
-        self.name = name
-        self.initial = initial
-        self.bounds = bounds
-    
-    def __repr__(self):
-        return f"Parameter(name={self.name}, initial={self.initial}, bounds={self.bounds})"
-
-    
-r = Parameter('R', bounds=(0, 1))
-
-        
 
 class BaseModel:
     __modelname__ = 'none'
@@ -225,8 +202,7 @@ class BaseModel:
 
         # Compute the fit statistic given observed and model-expected data
         if method == 'log-likelihood':
-            # TODO: Replace with g
-            # Fit using same approach as in spreadsheet
+            # Use the G-test
             ll_signal = loglik(O=observed_signal, E=expected_signal, N=self.n_signal)
             ll_noise = loglik(O=observed_noise, E=expected_noise, N=self.n_noise)
             return sum(ll_signal + ll_noise)
@@ -267,31 +243,23 @@ class BaseModel:
         )
         # Take the results
         self.x0 = self.optimisation_output.x
-        
-        # self.fitted_parameters = {k: v for k, v in zip(self.parameter_labels, self.x0)}
-        # Define the model inputs        
-        self._fitted_parameters = self.define_model_inputs(labels=self.parameter_labels, values=self.x0, n_criteria=self.n_criteria)
-        # Compute the expected probabilities using the model function, useful for AIC for example
-        self.expected_p_noise, self.expected_p_signal = self.compute_expected(**self._fitted_parameters)
 
-        # self.results = {
-        #     'fun': self.optimisation_output.fun,
-        #     'success': self.optimisation_output.success,
-        #     'AIC': AIC(self)
-        # }
-        # return self.results, self.fitted_parameters
+        # Define the model inputs        
+        self._fitted_parameters = self.define_model_inputs(
+            labels=self.parameter_labels,
+            values=self.x0,
+            n_criteria=self.n_criteria
+        )
+
+        # Compute the expected probabilities using the model function, useful for AIC for example
+        self.expected_p_noise, self.expected_p_signal = self.compute_expected(
+            **self._fitted_parameters
+        )
         return self._fitted_parameters
     
     def euclidean_misfit(self, ox, oy, ex, ey):
         pass
-    
-    # @property
-    # def x0(self):
-    #     return [p['initial'] for p in parameters.values()]
-    
-    # @property
-    # def x0_labels(self):
-    #     return list(parameters.keys())
+
 
 class HighThreshold(BaseModel):
     __modelname__ = 'High Threshold'
@@ -300,6 +268,9 @@ class HighThreshold(BaseModel):
     def __init__(self, signal, noise):
         self._named_parameters = {'R': {'initial': 0.999, 'bounds': (0, 1)}}
         super().__init__(signal, noise)
+    
+    def __repr__(self):
+        return f"<{sdt.__class__.__name__}: {self.__modelname__}>"
     
     def compute_expected(self, R, full=False):
         if full:
@@ -315,28 +286,23 @@ class SignalDetection(BaseModel):
     has_criteria = True
 
     def __init__(self, signal, noise, equal_variance=True):
-        # .parameters refers to the INPUT parameters defined for the model. Not the fitted_parameters.
-        # self.parameters = {'d': 0} # Will be updated with all criterion params on super() call
-        # self.parameter_boundaries = [(None, None)] # also updated on super() to include criteria
-        
-        self._named_parameters = {'d': {'initial': 0, 'bounds': (None, None)}}
-        
+        self._named_parameters = {'d': {'initial': 0, 'bounds': (None, None)}}        
         if not equal_variance:
             self.__modelname__ = self.__modelname__.replace('Equal', 'Unequal')
-            # Add additional parameter for the signal variance, along with boundary
-            # As per the docs (https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.Bounds.html)...
-            #    ...we can actually just include this as a parameter and fix the bounds equal to 1...
-            #    ... but the issue is that it would appear as an additional parameter and inflate the d.f.
+            # Add additional param for the signal variance & its boundary
             self._named_parameters['scale'] = {'initial': 1, 'bounds': (1, None)}
-        
+        # Create a meaningful label for reference
+        self.label = ''.join([i[0] for i in self.__modelname__.split()])
         super().__init__(signal, noise)
-        
+    
+    def __repr__(self):
+        return f"<{sdt.__class__.__name__}: {self.__modelname__}>"
+
     # SDT function to get f_exp
-    def compute_expected(self, d=None, scale=1, criteria=None, full=False):
-        # `full` may be unnecessary.
-        if criteria is None or full:
+    def compute_expected(self, d=None, scale=1, criteria=None):
+        if criteria is None:
+            # Useful for plotting a smoothed curve
             criteria = np.arange(-5, 5, 0.01)
-        
         model_signal = stats.norm.cdf(d / 2 - np.array(criteria), scale=scale)
         model_noise = stats.norm.cdf(-d / 2 - np.array(criteria), scale=1)
         return model_noise, model_signal
