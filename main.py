@@ -68,9 +68,9 @@ def accumulate(arr: array_like):
 #     return (x + i / len(a)) / (max(a) + 1)
 
 def compute_proportions(
-        arr: array_like,
-        corrected: Optional[bool]=True,
-        truncate: Optional[bool]=True
+    arr: array_like,
+    corrected: Optional[bool]=True,
+    truncate: Optional[bool]=True
     ) -> np.ndarray:
     """Compute the proportions of a response array.
     
@@ -504,6 +504,7 @@ class _BaseModel:
         
         if any(self.squared_errors==0):
             self.squared_errors = self.squared_errors[self.squared_errors != 0]
+        # TODO: AIC result is incorrect.
         self.aic = aic(L=sum(-np.log(np.sqrt(self.squared_errors))), k=self.n_param)
         
         
@@ -511,6 +512,7 @@ class _BaseModel:
         # TODO: Define nice results output
         self.results = {
             'model': self.__modelname__,
+            'opt-success': self.optimisation_output.success,
             method: self.optimisation_output.fun,
             'aic': self.aic
         }
@@ -577,24 +579,24 @@ if __name__ == '__main__':
     
     evsd = SignalDetection(signal, noise, equal_variance=True)
     evsd.fit('sse')
-    print(evsd.optimisation_output)
+    print(evsd.results)
     
     uvsd = SignalDetection(signal, noise, equal_variance=False)
     uvsd.fit('sse')
-    print(uvsd.optimisation_output)
+    print(uvsd.results)
 
     ht = HighThreshold(signal, noise)
     ht.fit('sse')
-    print(ht.optimisation_output)
+    print(ht.results)
     
-    # Plot
-    fig, ax = plt.subplots(dpi=150)
+    # # Plot
+    # fig, ax = plt.subplots(dpi=150)
 
-    plot_roc(ht.p_signal, ht.p_noise, ax=ax)
+    # plot_roc(ht.p_signal, ht.p_noise, ax=ax)
     
-    ax.plot(*ht.compute_expected(**ht.fitted_parameters), label=ht.label)
-    ax.plot(*evsd.compute_expected(**evsd.fitted_parameters), label=evsd.label)
-    ax.plot(*uvsd.compute_expected(**uvsd.fitted_parameters), label=uvsd.label)
+    # ax.plot(*ht.compute_expected(**ht.fitted_parameters), label=ht.label)
+    # ax.plot(*evsd.compute_expected(**evsd.fitted_parameters), label=evsd.label)
+    # ax.plot(*uvsd.compute_expected(**uvsd.fitted_parameters), label=uvsd.label)
 
-    ax.legend(loc='lower right')
-    plt.show()
+    # ax.legend(loc='lower right')
+    # plt.show()
