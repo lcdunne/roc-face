@@ -3,48 +3,168 @@ from scipy import stats
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 import legacy_chi2 as legacy_stats
+from typing import Union, Optional
+from matplotlib.axes import Axes
+
+numeric = Union[int, float, np.number]
+array_like = Union[list, tuple, np.ndarray]
 
 # Utility funcs. ------------------------------------------------- #
-def array_like(x):
-    return isinstance(x, (list, tuple, np.ndarray,))
+# def array_like(x):
+#     return isinstance(x, (list, tuple, np.ndarray,))
 
-def arrays_equal_length(a, b):
+def arrays_equal_length(a: array_like, b: array_like):
     if len(a) != len(b):
         return False
     else:
         return True
 
-def accumulate(arr):
-    if not array_like(arr):
-        raise ValueError("Expected array like")
+def accumulate(arr: array_like):
+    # if not array_like(arr):
+    #     raise ValueError("Expected array like")
     return np.cumsum(arr)
 
-def corrected_proportion(a, x, i=0):
-    """Converts an accumulated array to proportions of its total counts.
-    For example, given an array:
-        [1, 2, 3, 4, 5]
-    when accumulated: 
-        [1, 3, 6, 10, 15]
-    the current function will return:
-        [0.067, 0.2, 0.4, 0.67, 1]
-    """
-    return (x + i / len(a)) / (max(a) + 1)
+# def corrected_proportion(a: array_like, x: numeric, i: Optional[int]=0) -> float:
+#     """
+#     Converts a member in an accumulated array to a corrected proportion of the 
+#     total count of the array. This is accomplished by adding a small quantity 
+#     to the value before dividing by the total amount (plus 1). Ensures that the 
+#     proportions successively increase by at least a small amount, even if no 
+#     response was provided for that criterion level. May support solver in 
+#     finding a minimum.
 
-def compute_proportions(arr, truncate=True):
-    """Accumulates an array and converts it to proportions of its total."""
-    a = accumulate(arr)
-    freq = [corrected_proportion(a, x, i) for i, x in enumerate(a, start=1)]
+#     Parameters
+#     ----------
+#     a : array_like
+#         DESCRIPTION.
+#     x : numeric
+#         DESCRIPTION.
+#     i : int or float, optional
+#         DESCRIPTION. The default is 0.
+
+#     Returns
+#     -------
+#     float
+#         The corrected proportion.
     
-    if freq[-1] != 1:
-        raise ValueError(f"Expected max accumulated to be 1 but got {freq[-1]}.")
+#     Example
+#     -------
+#     Given an accumulated array (ascending), the function returns a proportion. 
+    
+#     >>> a = [505, 753, 979, 1151, 1295]
+#     the current function will return:
+#         [0.067, 0.2, 0.4, 0.67, 1]
+
+#     """
+    
+#     """Converts an accumulated array to proportions of its total counts.
+#     For example, given an array:
+#         [1, 2, 3, 4, 5]
+#     when accumulated: 
+#         [1, 3, 6, 10, 15]
+#     the current function will return:
+#         [0.067, 0.2, 0.4, 0.67, 1]
+#     """
+#     return (x + i / len(a)) / (max(a) + 1)
+
+def compute_proportions(
+        arr: array_like,
+        corrected: Optional[bool]=True,
+        truncate: Optional[bool]=True
+    ) -> np.ndarray:
+    """Compute the proportions of a response array.
+    
+    The input should be response counts for each criterion category for either 
+    signal OR noise datasets.
+    
+    Parameters
+    ----------
+    arr : array_like
+        The input array. EITHER: all responses to signal trials, OR all 
+        responses to noise trials.
+    corrected : bool, optional
+        If True, adds a small amount, equal to i/n (where i is the index of the 
+        array and `n` is the number of elements in the array) to each 
+        accumulated value, and also adds 1 to the total number of responses 
+        defined as the sum of the un-accumulated array (or the final element of 
+        the accumulated array). The default is True.
+    truncate : bool, optional
+        Whether to remove the final element of the returned array. This is 
+        typically required because (1) this value is always equal to 1 and is 
+        therefore implied, and (2) a value of 1 cannot be converted to a 
+        z-score, which is required to convert the resulting output from ROC- to
+        z-space. The default is True.
+
+    Raises
+    ------
+    ValueError
+        If the last element of the resulting array is not equal to 1.
+
+    Returns
+    -------
+    np.ndarray
+        The accumulated array of proportions.
+    
+    Example
+    -------
+    >>> s = [505, 248, 226, 172, 144, 93]
+    >>> compute_proportions(s)
+    array([0.3636909 , 0.54235661, 0.70518359, 0.82913367, 0.93292537])
+    
+    >>> compute_proportions(s, corrected=False)
+    array([0.36383285, 0.5425072 , 0.70533141, 0.82925072, 0.93299712])
+    
+    >>> compute_proportions(s, truncate=False)
+    array([0.3636909, 0.54235661, 0.70518359, 0.82913367, 0.93292537, 1])
+
+    """
+    a = accumulate(arr)
+    # freq = [corrected_proportion(a, x, i) for i, x in enumerate(a, start=1)]
+    if corrected:
+        f = [(x + i / len(a)) / (max(a) + 1) for i, x in enumerate(a, start=1)]
+    else:
+        f = list(a / max(a))
+    
+    if f[-1] != 1:
+        raise ValueError(f"Expected max accumulated to be 1 but got {f[-1]}.")
     
     if truncate:
-        freq.pop()
+        f.pop()
 
-    return np.array(freq)
+    return np.array(f)
 
-def plot_roc(signal, noise, ax=None, chance=True, **kwargs):
-    """A utility to plot ROC curves."""
+def plot_roc(
+        signal: array_like,
+        noise: array_like,
+        ax: Optional[Axes]=None,
+        chance: Optional[bool]=True,
+        **kwargs
+    ) -> Axes:
+    """A utility to plot ROC curves. Requires signal and noise arrays in 
+    probability space. Accept scatter plot keyword arguments.
+    
+    Parameters
+    ----------
+    signal : array_like
+        Signal array in probability space.
+    noise : array_like
+        Noise array in probability space.
+    ax : Optional[Axes], optional
+        Matplotlib Axes object to plot to, if already defined. The default is 
+        None.
+    chance : Optional[bool], optional
+        Whether or not to plot the diagonal chance line (0, 0), (1, 1). The 
+        default is True.
+    **kwargs : TYPE
+        Keyword arguments for the matplotlib.pyplot.scatter function. See 
+        https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.scatter.html.
+    
+    Returns
+    -------
+    ax : Axes
+        A matplotlib Axes object with the plotted signal & noise data.
+
+    """
     if ax is None:
         fig, ax = plt.subplots()
     
@@ -56,52 +176,157 @@ def plot_roc(signal, noise, ax=None, chance=True, **kwargs):
     ax.set(xlabel='1 - specificity', ylabel='sensitivity')
     return ax
 
+# de-accumulate
+def deaccumulate(arr: array_like) -> np.ndarray:
+    return np.diff(np.insert(arr, 0, 0)) # insert a 0 at the start
+
 # Fitting functions
-def loglik(O, E, N):
-    """Computes the G-test (https://en.wikipedia.org/wiki/G-test)."""
+def loglik(O: np.array, E: np.array, N: numeric):
+    """Computes the G-test (https://en.wikipedia.org/wiki/G-test).
+    Note that this function is equivalent to 
+    `scipy.stats.power_divergence(f_obs, f_exp, ... lambda_='log-likelihood')`.
+
+    Parameters
+    ----------
+    O : array_like
+        An array of accumulated observed counts.
+    E : array_like
+        An array of accumulated expected counts.
+    N : numeric
+        The total number of responses for the set. As currently implemented,
+        O is truncated and will not contain the total N at O[-1], so N must be 
+        passed explicitly. This may be changed in a future implementation.
+
+    Returns
+    -------
+    np.array
+        An array equal to the length of O & E. This contains the computed G^2 
+        values for all pairs of G(Oi, Ei). Each element is an estimate of the 
+        model fit at the given criterion level i. The sum of these elements is 
+        the sum of G^2, which can then be further analysed.
+    """
+    # TODO: N could be obtained with N = O[-1] if we do not truncate the input.
+    #   however this would mean len(O) == len(E)+1 which is a little clunky.
     with np.errstate(divide='ignore'):
         # ignore infinite value warning & return inf anyway.
+        # alternative return could be just the sum of this.
         return 2 * O * np.log(O/E) + 2 * (N - O) * np.log((N - O)/(N - E))
 
 def chitest(O, E, N):
-    """Computes Pearson's χ^2 test.
-    Is equivalent to `scipy.stats.power_divergence` with argument 'pearson').
+    """Computes Pearson's χ^2 test (https://en.wikipedia.org/wiki/Chi-squared_test). 
+    Note that this function is equivalent to 
+    `scipy.stats.power_divergence(f_obs, f_exp, ... lambda_='pearson')`.
+
+    Parameters
+    ----------
+    O : array_like
+        An array of accumulated observed counts.
+    E : array_like
+        An array of accumulated expected counts.
+    N : numeric
+        The total number of responses for the set. As currently implemented,
+        O is truncated and will not contain the total N at O[-1], so N must be 
+        passed explicitly. This may be changed in a future implementation.
+
+    Returns
+    -------
+    np.array
+        An array equal to the length of O & E. This contains the computed χ^2 
+        values for all pairs of χ^2(Oi, Ei). Each element is an estimate of the 
+        model fit at the given criterion level i. The sum of these elements is 
+        the sum of χ^2, which can then be further analysed.
     """
     return (O - E)**2 / E + ((N-O) - (N-E))**2 / (N-E)
 
-def sum_sse(O, E):
-    """Computes the simple sum of squared errors for the fit."""
-    return sum( (O - E)**2 )
+def squared_errors(O, E):
+    """Computes the sum of squared errors between observed values and those 
+    which were computed by the model.
 
-def aic(L, k):
-    """Computes Akaike's information criterion."""
+    Parameters
+    ----------
+    O : array_like
+        An array of accumulated observed counts.
+    E : array_like
+        An array of accumulated expected counts.
+
+    Returns
+    -------
+    np.array
+        An array equal to the length of O & E. This contains the computed 
+        squared error values for all pairs of error(Oi, Ei). Each element is an 
+        estimate of the model fit at the given criterion level i. The sum of 
+        these elements is the sum of squared errors.
+    """
+    return (O - E)**2
+
+def aic(L: float, k: int):
+    """Computes Akaike's information criterion (AIC; https://en.wikipedia.org/wiki/Akaike_information_criterion).
+    
+    Is an estimator of quality of each model relative to others, enabling model 
+    comparison and selection.
+
+    Parameters
+    ----------
+    L : float
+        The maximum value of the likelihood function for the model. In the 
+        present context, this is the sum of the negative log of the errors of 
+        a given model, i.e. sum(-ln(sqrt(squared_errors))).
+    k : int
+        The number of estimated parameters in the model.
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    """
+    """Computes Akaike's information criterion (https://en.wikipedia.org/wiki/Akaike_information_criterion).
+    """
     # k: number of estimated parameters in the model
     return 2 * k - 2 * np.log(L)
 
-def auc(x, y):
-    """Computes the area under the ROC curve."""
+def auc(x: array_like, y: array_like):
+    """The area under the curve. In the context of ROC curves, it is equal to 
+    the probability that the classifier will be able to discriminate signal 
+    from noise.
+
+    Parameters
+    ----------
+    x : array_like
+        The sample points corresponding to the false positive probabilities.
+    y : array_like
+        The sample points corresponding to the true positive probabilities.
+
+    Returns
+    -------
+    float or np.ndarray
+        The area under the curve. For more details, see 
+        https://numpy.org/doc/stable/reference/generated/numpy.trapz.html.
+
+    """
     return np.trapz(x=x, y=y)
 
-class BaseModel:
+class _BaseModel:
+    """Base model class be inherited by all specific model classes. 
+    
+    Contains functionality and attributes that are used by 
+    all models. Not to be instantiated directly.
+
+    Parameters
+    ----------
+    signal : array_like
+        DESCRIPTION.
+    noise : array_like
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
     __modelname__ = 'none'
 
     def __init__(self, signal, noise):
-        '''
-        Model instantiation will create...
-        Why not just use a dict with "criteria" as a key and an ordered array...?
-
-        Parameters
-        ----------
-        signal : TYPE
-            DESCRIPTION.
-        noise : TYPE
-            DESCRIPTION.
-
-        Returns
-        -------
-        None.
-
-        '''
         self.shortname = ''.join([i[0] for i in self.__modelname__.split(' ')])
         self.signal = signal
         self.noise = noise
@@ -127,6 +352,15 @@ class BaseModel:
     
     @property
     def initial_parameters(self):
+        """
+        
+
+        Returns
+        -------
+        dict
+            DESCRIPTION.
+
+        """
         return {k: v['initial'] for k, v in self._parameters.items()}
     
     @property
@@ -214,9 +448,9 @@ class BaseModel:
 
         elif method == 'sse':
             # Fit using approach from Yonelinas' spreadsheet
-            sse_signal = sum_sse(observed_signal, expected_signal)
-            sse_noise = sum_sse(observed_noise, expected_noise)
-            return sse_signal + sse_noise
+            sse_signal = squared_errors(observed_signal, expected_signal)
+            sse_noise = squared_errors(observed_noise, expected_noise)
+            return sum(sse_signal + sse_noise)
 
         elif 'legacy' in method:
             lamb = method.split(' ')[-1] # Gets e.g. 'log-likelihood' (g-test) or 'pearson' (chi-square)
@@ -288,7 +522,7 @@ class BaseModel:
         pass
 
 
-class HighThreshold(BaseModel):
+class HighThreshold(_BaseModel):
     __modelname__ = 'High Threshold'
     _has_criteria = False
 
@@ -310,7 +544,7 @@ class HighThreshold(BaseModel):
         return model_noise, model_signal
 
 
-class SignalDetection(BaseModel):
+class SignalDetection(_BaseModel):
     __modelname__ = 'Equal Variance Signal Detection'
     _has_criteria = True
 
@@ -337,21 +571,20 @@ class SignalDetection(BaseModel):
         return model_noise, model_signal
 
 if __name__ == '__main__':
-    import matplotlib.pyplot as plt
     
     signal = [505,248,226,172,144,93]
     noise = [115,185,304,523,551,397]
     
     evsd = SignalDetection(signal, noise, equal_variance=True)
-    evsd.fit()
+    evsd.fit('sse')
     print(evsd.optimisation_output)
     
     uvsd = SignalDetection(signal, noise, equal_variance=False)
-    uvsd.fit()
+    uvsd.fit('sse')
     print(uvsd.optimisation_output)
 
     ht = HighThreshold(signal, noise)
-    ht.fit()
+    ht.fit('sse')
     print(ht.optimisation_output)
     
     # Plot
