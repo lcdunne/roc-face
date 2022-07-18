@@ -502,19 +502,18 @@ class _BaseModel:
             [self._signal_squared_errors, self._noise_squared_errors]
         )
         
-        if any(self.squared_errors==0):
-            self.squared_errors = self.squared_errors[self.squared_errors != 0]
-        # TODO: AIC result is incorrect.
-        self.aic = aic(L=sum(-np.log(np.sqrt(self.squared_errors))), k=self.n_param)
-        
-        
+        # Compute the AIC
+        diffs = np.sqrt(self.squared_errors)
+        diffs[diffs == 0] = 1                   # hack 1 (prevent infinite values)
+        L = np.product(diffs)**-1               # hack 2 (make it fit to the AIC function)
+        self.aic = aic(L=L, k=self.n_param)
         
         # TODO: Define nice results output
         self.results = {
             'model': self.__modelname__,
             'opt-success': self.optimisation_output.success,
             method: self.optimisation_output.fun,
-            'aic': self.aic
+            'aic': self.aic,
         }
         
         return self._fitted_parameters
@@ -578,15 +577,15 @@ if __name__ == '__main__':
     noise = [115,185,304,523,551,397]
     
     evsd = SignalDetection(signal, noise, equal_variance=True)
-    evsd.fit('sse')
+    evsd.fit()
     print(evsd.results)
     
     uvsd = SignalDetection(signal, noise, equal_variance=False)
-    uvsd.fit('sse')
+    uvsd.fit()
     print(uvsd.results)
 
     ht = HighThreshold(signal, noise)
-    ht.fit('sse')
+    ht.fit()
     print(ht.results)
     
     # # Plot
