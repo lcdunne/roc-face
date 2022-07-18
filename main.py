@@ -496,10 +496,11 @@ class _BaseModel:
         )
         
         # Errors
-        self._signal_squared_errors = (self.p_signal - self.expected_p_signal) ** 2
-        self._noise_squared_errors = (self.p_noise - self.expected_p_noise) ** 2
+        # Individual signal & noise are also useful for looking at fits (e.g. plotting "euclidean fit")
+        self.signal_squared_errors = (self.p_signal - self.expected_p_signal) ** 2
+        self.noise_squared_errors = (self.p_noise - self.expected_p_noise) ** 2
         self.squared_errors = np.concatenate(
-            [self._signal_squared_errors, self._noise_squared_errors]
+            [self.signal_squared_errors, self.noise_squared_errors]
         )
         
         # Compute the AIC
@@ -508,19 +509,34 @@ class _BaseModel:
         L = np.product(diffs)**-1               # hack 2 (make it fit to the AIC function)
         self.aic = aic(L=L, k=self.n_param)
         
+        # # Compute the euclidean misfit
+        # self.misfit = self.euclidean_misfit(
+        #     self.p_signal, self.p_noise,
+        #     self.expected_p_signal, self.expected_p_noise
+        #     )
+        
+        # Compute the overall euclidean fit
+        signal_euclidean = euclidean_distance(self.p_signal, self.expected_p_signal)
+        noise_euclidean = euclidean_distance(self.p_noise, self.expected_p_noise)
+        self.euclidean_fit = signal_euclidean + noise_euclidean
+        
+        
         # TODO: Define nice results output
         self.results = {
             'model': self.__modelname__,
             'opt-success': self.optimisation_output.success,
             method: self.optimisation_output.fun,
             'aic': self.aic,
+            'euclidean_fit': self.euclidean_fit,
         }
         
         return self._fitted_parameters
     
-    def euclidean_misfit(self, ox, oy, ex, ey):
-        # TODO
-        pass
+    # def euclidean_misfit(self, ox, oy, ex, ey):
+    #     return euclidean_distance(ox, ex) + euclidean_distance(oy, ey)
+
+def euclidean_distance(x: np.array, y: np.array):
+    return np.sqrt(sum((y - x)**2))
 
 
 class HighThreshold(_BaseModel):
@@ -588,14 +604,25 @@ if __name__ == '__main__':
     ht.fit()
     print(ht.results)
     
-    # # Plot
-    # fig, ax = plt.subplots(dpi=150)
+    # Plot
+    fig, ax = plt.subplots(dpi=150)
 
-    # plot_roc(ht.p_signal, ht.p_noise, ax=ax)
+    plot_roc(ht.p_signal, ht.p_noise, ax=ax)
     
-    # ax.plot(*ht.compute_expected(**ht.fitted_parameters), label=ht.label)
-    # ax.plot(*evsd.compute_expected(**evsd.fitted_parameters), label=evsd.label)
-    # ax.plot(*uvsd.compute_expected(**uvsd.fitted_parameters), label=uvsd.label)
+    ax.plot(*ht.compute_expected(**ht.fitted_parameters), label=ht.label)
+    ax.plot(*evsd.compute_expected(**evsd.fitted_parameters), label=evsd.label)
+    ax.plot(*uvsd.compute_expected(**uvsd.fitted_parameters), label=uvsd.label)
 
-    # ax.legend(loc='lower right')
-    # plt.show()
+    ax.legend(loc='lower right')
+    plt.show()
+    
+    import seaborn as sns
+    fig, ax = plt.subplots(1,3, sharey=True)
+    sns.barplot(x=np.arange(1,11), y=ht.squared_errors, ax=ax[0])
+    sns.barplot(x=np.arange(1,11), y=evsd.squared_errors, ax=ax[1])
+    sns.barplot(x=np.arange(1,11), y=uvsd.squared_errors, ax=ax[2])
+    ax[0].set(ylabel='Log Euclidean Fit', yscale='log', title='High Threshold')
+    ax[1].set(title='Equal Variance', yscale='log')
+    ax[2].set(title='Unequal Variance', yscale='log')
+    plt.show()
+    
