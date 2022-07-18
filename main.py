@@ -212,7 +212,7 @@ def loglik(O: np.array, E: np.array, N: numeric):
         # alternative return could be just the sum of this.
         return 2 * O * np.log(O/E) + 2 * (N - O) * np.log((N - O)/(N - E))
 
-def chitest(O, E, N):
+def chitest(O: np.array, E: np.array, N: numeric):
     """Computes Pearson's χ^2 test (https://en.wikipedia.org/wiki/Chi-squared_test). 
     Note that this function is equivalent to 
     `scipy.stats.power_divergence(f_obs, f_exp, ... lambda_='pearson')`.
@@ -238,7 +238,7 @@ def chitest(O, E, N):
     """
     return (O - E)**2 / E + ((N-O) - (N-E))**2 / (N-E)
 
-def squared_errors(O, E):
+def squared_errors(O: np.array, E: np.array):
     """Computes the sum of squared errors between observed values and those 
     which were computed by the model.
 
