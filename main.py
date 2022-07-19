@@ -67,6 +67,11 @@ def accumulate(arr: array_like):
 #     """
 #     return (x + i / len(a)) / (max(a) + 1)
 
+# def subset_dict(d, withkeys=None):
+#     if withkeys is None:
+#         return {k: v for k, v in d.items()}
+#     return {k: v for k, v in d.items() if k in withkeys}
+
 def compute_proportions(
     arr: array_like,
     corrected: Optional[bool]=True,
@@ -315,13 +320,13 @@ class _BaseModel:
     Parameters
     ----------
     signal : array_like
-        DESCRIPTION.
+        An array of observed response counts to signal-present trials.
     noise : array_like
-        DESCRIPTION.
+        An array of observed response counts to noise trials.
 
-    Returns
-    -------
-    None.
+    Attributes
+    ----------
+    
 
     """
     __modelname__ = 'none'
@@ -338,7 +343,6 @@ class _BaseModel:
         self.p_noise = compute_proportions(self.noise)
         self.auc = auc(x=np.append(self.p_noise, 1), y=np.append(self.p_signal, 1))
         
-        # Since multiple models will have criteria, best to init them in this parent class
         if self._has_criteria:
             self.n_criteria = len(self.p_signal)
             self._criteria = {
@@ -352,68 +356,104 @@ class _BaseModel:
     
     @property
     def initial_parameters(self):
-        """
-        
-
-        Returns
-        -------
-        dict
-            DESCRIPTION.
-
-        """
+        """dict: Starting parameters before applying the fitting procedure."""
         return {k: v['initial'] for k, v in self._parameters.items()}
     
     @property
     def fitted_parameters(self):
-        # return {k: v.get('fitted') for k, v in self._parameters.items() if v.get('fitted') is not None}
+        """dict: Parameters after fitting."""
         return self._fitted_parameters
     
     @property
     def parameter_labels(self):
+        """list: The labels for all parameters in the model."""
         return list(self._parameters.keys())
     
     @property
     def parameter_boundaries(self):
+        """list: The boundary conditions for each parameter during fitting."""
         return list({k: v['bounds'] for k, v in self._parameters.items()}.values())
     
     @property
     def n_param(self):
+        """int: The number of model parameters."""
         return len(self.parameter_labels)
     
-    @property
-    def initial_input(self):
-        # This is not even a necessary variable - just use it directly as input
-        return list(self.initial_parameters.values())
-    
-    def define_model_inputs(self, labels, values, n_criteria=0):
-        # Maps from flat list of labels and x0 values to dict accepted by `<model>.compute_expected`
+    def define_model_inputs(self, labels: list, values: list, n_criteria: int=0):
+        """Maps from flat list of labels and x0 values to dict accepted by the
+        `<model>.compute_expected(...)` function.
+
+        Parameters
+        ----------
+        labels : list
+            A list of labels defining the parameter names.
+        values : list
+            A list of parameter values corresponding to the list of labels. 
+            These must be in the same order.
+        n_criteria : int, optional
+            DESCRIPTION. The default is 0.
+
+        Returns
+        -------
+        dict
+            A dictionary that can be unpacked into the modelling function. All 
+            named parameters are defined by unique key-value pairs; any 
+            criterion parameters are stored in the 'criterion' key, as this 
+            parameter in the modelling function requires a list.
+        
+        Example
+        -------
+        >>> evsd.define_model_inputs(
+                labels=['d', 'c0', 'c1', 'c2', 'c3', 'c4'],
+                values=[1.0201, 0.9459, 0.4768, 0.012, -0.5621, -1.2872],
+                n_criteria=5
+            )
+        {'d': 1.0201, 'criteria': [0.9459, 0.4768, 0.012, -0.5621, -1.2872]}
+
+        """
         if n_criteria == 0:
             return dict(zip(labels, values))        
-        # Number of named i.e. non-criteria parameters
+        
         n_named = len(labels) - n_criteria
-        return dict(zip(labels[:n_named], values[:n_named])) | {'criteria': values[n_named:]}
+        
+        named_params = dict(zip(labels[:n_named], values[:n_named]))
+        criterion_parameters = {'criteria': values[n_named:]}
+        
+        return named_params | criterion_parameters
+    
 
-    def subset_dict(self, d, withkeys=None):
-        if withkeys is None:
-            return {k: v for k, v in d.items()}
-        return {k: v for k, v in d.items() if k in withkeys}
+    def _objective(self, x0: array_like, method: Optional[str]='log-likelihood') -> float:
+        """The objective function to minimise. Not intended to be manually 
+        called.
+        
+        During minimization, this function will be called on each iteration 
+        with different values of x0 passed in by scipy.stats.optimize.minimize. 
+        The values are then passed to the specific theoretical model being 
+        fitted, resulting in a set of model-expected values. These expected 
+        values are then compared (according to the objective function) with the 
+        observed data to produce the resulting value of the objective function.
+        
+        When calling the <model>.fit() function, the method parameter defines 
+        the method of this objective function (e.g. log-likelihood). This 
+        argument is passed as a parameter during the call to optimize.minimize.
 
-    def objective(self, x0, method='log-likelihood'):
-        '''
-        Uses parameters defined in x0 to pass to the theoretical model and compute expected values.
-        
-        These expected values are then assessed in terms of their fit according to the specified method.
-        
-        Method must be one of:
-            'log-likelihood'
-            'legacy log-likelihood'
-            'legacy pearson'
-            'sse'
-        
-        The result of this fit procedure is a single statistic.
-        
-        The minimization algorithm updates the x0 params until the fit statistic is been minimized.
-        '''
+        Parameters
+        ----------
+        x0 : array_like
+            List of parameters to be optimised. The first call uses the initial 
+            guess, corresponding to list(self.initial_parameters). These values 
+            are passed to the theoretical model being fitted, and the value of 
+            the objective function is then calculated.
+        method : str, optional
+            See the .fit method for details. The default is 'log-likelihood'.
+
+        Returns
+        -------
+        float
+            The value, for this iteration, of the objective function to be 
+            minimized (i.e. a χ^2, G^2, or sum of squared errors).
+
+        """
         # Get the "observed" counts
         observed_signal = self.acc_signal[:-1]
         observed_noise = self.acc_noise[:-1]
@@ -467,26 +507,46 @@ class _BaseModel:
             )
             return sum(ll_signal) + sum(ll_noise)
     
-    def fit(self, method='log-likelihood'):
-        '''
-        To return:
-            {method: result, success: bool, observed_prob, expected_prob, observed_count, expected_count}
-        '''
+    def fit(self, method: Optional[str]='log-likelihood'):
+        """Fits the theoretical model to the observed data.
+        
+        Runs the optimisation function according to the chosen method and 
+        computes various statistics from the result.
+        
+        1) Fits the model using scipy.optimize.minimize
+        2) Computes the expected signal and noise values after fitting
+        3) Computes the squared errors for signal & noise fits
+        4) Computes the AIC
+        5) Computes euclidean distance between observed and expected values
+
+        Parameters
+        ----------
+        method : str, optional
+            The name of the objective function. Currently accepted values are 
+            'log-likelihood', 'legacy log-likelihood', 'legacy pearson', 'chi', 
+            and 'sse'. The default is 'log-likelihood'.
+
+        Returns
+        -------
+        dict
+            The fitted parameters.
+
+        """
         # Run the fit function
         self.optimisation_output = minimize(
-            fun=self.objective,
-            x0=self.initial_input,
+            fun=self._objective,
+            x0=list(self.initial_parameters.values()),
             args=(method),
             bounds=self.parameter_boundaries,
             tol=1e-6
         )
         # Take the results
-        self.x0 = self.optimisation_output.x
+        self.fitted_values = self.optimisation_output.x
 
         # Define the model inputs        
         self._fitted_parameters = self.define_model_inputs(
             labels=self.parameter_labels,
-            values=self.x0,
+            values=self.fitted_values,
             n_criteria=self.n_criteria
         )
 
@@ -530,7 +590,7 @@ class _BaseModel:
             'euclidean_fit': self.euclidean_fit,
         }
         
-        return self._fitted_parameters
+        return self.fitted_parameters
     
     # def euclidean_misfit(self, ox, oy, ex, ey):
     #     return euclidean_distance(ox, ex) + euclidean_distance(oy, ey)
@@ -546,6 +606,7 @@ class HighThreshold(_BaseModel):
     def __init__(self, signal, noise):
         self._named_parameters = {'R': {'initial': 0.999, 'bounds': (0, 1)}}
         # TODO: This model actually has 2 parameters, with `g` (guess). Currently self.n_param returns just 1. would be good to fix the compute_expected for this.
+        #   One option would be to provide an override parameter here, and then to check if hasattr(self, override_param): if not, then just make the number of parameters. Otherwise, use the overridden number as the number of parameters.
         self.label = ''.join([i[0] for i in self.__modelname__.split()])
         super().__init__(signal, noise)
     
