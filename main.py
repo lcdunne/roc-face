@@ -276,7 +276,10 @@ class _BaseModel:
     
 
     """
+    # Defaults
     __modelname__ = 'none'
+    _has_criteria = False
+    _named_parameters = {}
 
     def __init__(self, signal, noise):
         self.shortname = ''.join([i[0] for i in self.__modelname__.split(' ')])
@@ -290,6 +293,12 @@ class _BaseModel:
         self.p_noise = compute_proportions(self.noise)
         self.auc = auc(x=np.append(self.p_noise, 1), y=np.append(self.p_signal, 1))
         
+        if not self._named_parameters:
+            _s = {f's{i+1}': {'initial': 0, 'bounds': (None, None)} for i, s in enumerate(self.p_signal)}
+            _n = {f'n{i+1}': {'initial': 0, 'bounds': (None, None)} for i, s in enumerate(self.p_noise)}
+            self._named_parameters = _s | _n
+        
+        # if getattr(self, '_has_criteria', False):
         if self._has_criteria:
             self.n_criteria = len(self.p_signal)
             self._criteria = {
@@ -315,6 +324,7 @@ class _BaseModel:
     @property
     def fitted_parameters(self):
         """dict: Parameters after fitting."""
+        # TODO: Prevent error when calling this before fitting.
         return self._fitted_parameters
     
     @property
@@ -326,6 +336,16 @@ class _BaseModel:
     def parameter_boundaries(self):
         """list: The boundary conditions for each parameter during fitting."""
         return list({k: v['bounds'] for k, v in self._parameters.items()}.values())
+    
+    @property
+    def signal_boundary(self):
+        """int: The index in the criterion array that corresponds to the 
+        boundary between signal and noise (the lowest signal criterion)."""
+        if not self._has_criteria:
+            return
+        c = list(self._criteria.keys())
+        return c.index( c[:int(np.ceil(len(c)/2))][-1] )
+        
     
     @property
     def n_param(self):
@@ -374,6 +394,18 @@ class _BaseModel:
         
         return named_params | criterion_parameters
     
+    def compute_expected(self, *args, **kwargs):
+        """Placeholder function for an undefined model.
+
+        Returns
+        -------
+        model_noise : array_like
+            The expected values for the noise array, according to the model.
+        model_signal : array_like
+            The expected values for the signal array, according to the model.
+
+        """
+        return self.p_noise.copy(), self.p_signal.copy()
 
     def _objective(self, x0: array_like, method: Optional[str]='log-likelihood') -> float:
         """The objective function to minimise. Not intended to be manually 
@@ -417,7 +449,6 @@ class _BaseModel:
             values=x0, # Not the same as self.x0: this one gets updated
             n_criteria=self.n_criteria
         )
-        
         # Compute the expected probabilities using the model function
         expected_p_noise, expected_p_signal = self.compute_expected(**model_input)
         
@@ -716,10 +747,12 @@ class DualProcess(_BaseModel):
     
     @property
     def familiarity(self):
+        """float: Estimate of familiarity."""
         return self._familiarity
     
     @property
     def recollection(self):
+        """float: Estimate of recollection."""
         return self._recollection    
 
     def compute_expected(
@@ -759,8 +792,11 @@ class DualProcess(_BaseModel):
             criteria = np.arange(-5, 5, 0.01)
         
         # Estimate familiarity & recollection
-        signal_boundary = criteria[: int( np.ceil( len( criteria ) / 2 ))][-1]
-        self._familiarity = stats.norm.cdf( d / 2 - signal_boundary )
+        c = list(evsd._criteria.keys())
+        c[:int(np.ceil(len(c)/2))][-1]
+        
+        # signal_boundary = criteria[: int( np.ceil( len( criteria ) / 2 ))][-1]
+        self._familiarity = stats.norm.cdf( d / 2 - criteria[self.signal_boundary] )
         self._recollection = R
 
         model_noise = stats.norm.cdf(-d / 2 - criteria)
