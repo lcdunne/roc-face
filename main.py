@@ -10,9 +10,6 @@ numeric = Union[int, float, np.number]
 array_like = Union[list, tuple, np.ndarray]
 
 # Utility funcs. ------------------------------------------------- #
-# def array_like(x):
-#     return isinstance(x, (list, tuple, np.ndarray,))
-
 def arrays_equal_length(a: array_like, b: array_like):
     if len(a) != len(b):
         return False
@@ -20,57 +17,7 @@ def arrays_equal_length(a: array_like, b: array_like):
         return True
 
 def accumulate(arr: array_like):
-    # if not array_like(arr):
-    #     raise ValueError("Expected array like")
     return np.cumsum(arr)
-
-# def corrected_proportion(a: array_like, x: numeric, i: Optional[int]=0) -> float:
-#     """
-#     Converts a member in an accumulated array to a corrected proportion of the 
-#     total count of the array. This is accomplished by adding a small quantity 
-#     to the value before dividing by the total amount (plus 1). Ensures that the 
-#     proportions successively increase by at least a small amount, even if no 
-#     response was provided for that criterion level. May support solver in 
-#     finding a minimum.
-
-#     Parameters
-#     ----------
-#     a : array_like
-#         DESCRIPTION.
-#     x : numeric
-#         DESCRIPTION.
-#     i : int or float, optional
-#         DESCRIPTION. The default is 0.
-
-#     Returns
-#     -------
-#     float
-#         The corrected proportion.
-    
-#     Example
-#     -------
-#     Given an accumulated array (ascending), the function returns a proportion. 
-    
-#     >>> a = [505, 753, 979, 1151, 1295]
-#     the current function will return:
-#         [0.067, 0.2, 0.4, 0.67, 1]
-
-#     """
-    
-#     """Converts an accumulated array to proportions of its total counts.
-#     For example, given an array:
-#         [1, 2, 3, 4, 5]
-#     when accumulated: 
-#         [1, 3, 6, 10, 15]
-#     the current function will return:
-#         [0.067, 0.2, 0.4, 0.67, 1]
-#     """
-#     return (x + i / len(a)) / (max(a) + 1)
-
-# def subset_dict(d, withkeys=None):
-#     if withkeys is None:
-#         return {k: v for k, v in d.items()}
-#     return {k: v for k, v in d.items() if k in withkeys}
 
 def compute_proportions(
     arr: array_like,
@@ -124,7 +71,7 @@ def compute_proportions(
 
     """
     a = accumulate(arr)
-    # freq = [corrected_proportion(a, x, i) for i, x in enumerate(a, start=1)]
+    
     if corrected:
         f = [(x + i / len(a)) / (max(a) + 1) for i, x in enumerate(a, start=1)]
     else:
@@ -137,6 +84,9 @@ def compute_proportions(
         f.pop()
 
     return np.array(f)
+
+def euclidean_distance(x: np.array, y: np.array):
+    return np.sqrt(sum((y - x)**2))
 
 def plot_roc(
         signal: array_like,
@@ -285,9 +235,6 @@ def aic(L: float, k: int):
         DESCRIPTION.
 
     """
-    """Computes Akaike's information criterion (https://en.wikipedia.org/wiki/Akaike_information_criterion).
-    """
-    # k: number of estimated parameters in the model
     return 2 * k - 2 * np.log(L)
 
 def auc(x: array_like, y: array_like):
@@ -353,6 +300,9 @@ class _BaseModel:
             # This will only be the case for high threshold model
             self.n_criteria = 0
             self._parameters = self._named_parameters.copy()
+        
+        if not hasattr(self, '_n_named_parameters'):
+            self._n_named_parameters = len(self._named_parameters)
     
     @property
     def initial_parameters(self):
@@ -377,7 +327,7 @@ class _BaseModel:
     @property
     def n_param(self):
         """int: The number of model parameters."""
-        return len(self.parameter_labels)
+        return self._n_named_parameters + self.n_criteria
     
     def define_model_inputs(self, labels: list, values: list, n_criteria: int=0):
         """Maps from flat list of labels and x0 values to dict accepted by the
@@ -569,12 +519,6 @@ class _BaseModel:
         L = np.product(diffs)**-1               # hack 2 (make it fit to the AIC function)
         self.aic = aic(L=L, k=self.n_param)
         
-        # # Compute the euclidean misfit
-        # self.misfit = self.euclidean_misfit(
-        #     self.p_signal, self.p_noise,
-        #     self.expected_p_signal, self.expected_p_noise
-        #     )
-        
         # Compute the overall euclidean fit
         signal_euclidean = euclidean_distance(self.p_signal, self.expected_p_signal)
         noise_euclidean = euclidean_distance(self.p_noise, self.expected_p_noise)
@@ -591,12 +535,6 @@ class _BaseModel:
         }
         
         return self.fitted_parameters
-    
-    # def euclidean_misfit(self, ox, oy, ex, ey):
-    #     return euclidean_distance(ox, ex) + euclidean_distance(oy, ey)
-
-def euclidean_distance(x: np.array, y: np.array):
-    return np.sqrt(sum((y - x)**2))
 
 
 class HighThreshold(_BaseModel):
@@ -605,8 +543,7 @@ class HighThreshold(_BaseModel):
 
     def __init__(self, signal, noise):
         self._named_parameters = {'R': {'initial': 0.999, 'bounds': (0, 1)}}
-        # TODO: This model actually has 2 parameters, with `g` (guess). Currently self.n_param returns just 1. would be good to fix the compute_expected for this.
-        #   One option would be to provide an override parameter here, and then to check if hasattr(self, override_param): if not, then just make the number of parameters. Otherwise, use the overridden number as the number of parameters.
+        self._n_named_parameters = len(self._named_parameters) + 1 # Required because `g` parameter is implicit
         self.label = ''.join([i[0] for i in self.__modelname__.split()])
         super().__init__(signal, noise)
     
@@ -632,14 +569,13 @@ class SignalDetection(_BaseModel):
         if not equal_variance:
             self.__modelname__ = self.__modelname__.replace('Equal', 'Unequal')
             self._named_parameters['scale'] = {'initial': 1, 'bounds': (1, None)}
-
+        
         self.label = ''.join([i[0] for i in self.__modelname__.split()])
         super().__init__(signal, noise)
     
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.__modelname__}>"
 
-    # SDT function to get f_exp
     def compute_expected(self, d=None, scale=1, criteria=None):
         if criteria is None:
             criteria = np.arange(-5, 5, 0.01)
