@@ -304,6 +304,9 @@ class _BaseModel:
         if not hasattr(self, '_n_named_parameters'):
             self._n_named_parameters = len(self._named_parameters)
     
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: {self.__modelname__}>"
+    
     @property
     def initial_parameters(self):
         """dict: Starting parameters before applying the fitting procedure."""
@@ -505,6 +508,9 @@ class _BaseModel:
             **self._fitted_parameters
         )
         
+        # TODO: After the above, would be nice to have a method to make all stats
+        #   like ._make_results()
+        
         # Errors
         # Individual signal & noise are also useful for looking at fits (e.g. plotting "euclidean fit")
         self.signal_squared_errors = (self.p_signal - self.expected_p_signal) ** 2
@@ -524,7 +530,6 @@ class _BaseModel:
         noise_euclidean = euclidean_distance(self.p_noise, self.expected_p_noise)
         self.euclidean_fit = signal_euclidean + noise_euclidean
         
-        
         # TODO: Define nice results output
         self.results = {
             'model': self.__modelname__,
@@ -538,6 +543,22 @@ class _BaseModel:
 
 
 class HighThreshold(_BaseModel):
+    """High Threshold model class. Inherits functionality from _BaseModel class.
+    
+    See Yonelinas et al. (1996).
+
+    Parameters
+    ----------
+    signal : array_like
+        An array of observed response counts to signal-present trials.
+    noise : array_like
+        An array of observed response counts to noise trials.
+
+    Attributes
+    ----------
+    https://softwareengineering.stackexchange.com/questions/353004/how-should-i-handle-docstrings-of-subclass-methods
+
+    """
     __modelname__ = 'High Threshold'
     _has_criteria = False
 
@@ -547,10 +568,28 @@ class HighThreshold(_BaseModel):
         self.label = ''.join([i[0] for i in self.__modelname__.split()])
         super().__init__(signal, noise)
     
-    def __repr__(self):
-        return f"<{self.__class__.__name__}: {self.__modelname__}>"
-    
-    def compute_expected(self, R, full=False):
+    def compute_expected(self, R: float, full: Optional[bool]=False) -> tuple:
+        """Compute the expected signal and noise array using the High Threshold 
+        model.
+
+        Parameters
+        ----------
+        R : float
+            Threshold parameter, corresponding to the probability of 
+            recollection - the only variable to be solved for in the 
+            High Threshold model.
+        full : bool, optional
+            Whether to extend the model line across probability space. The 
+            default is False.
+        
+        Returns
+        -------
+        model_noise : array_like
+            The expected values for the noise array, according to the model.
+        model_signal : array_like
+            The expected values for the signal array, according to the model.
+
+        """
         if full:
             model_noise = np.array([0, 1])
         else:
@@ -560,6 +599,27 @@ class HighThreshold(_BaseModel):
 
 
 class SignalDetection(_BaseModel):
+    """Signal Detection model class. Inherits functionality from _BaseModel 
+    class.
+    
+    See Wixted.
+
+    Parameters
+    ----------
+    signal : array_like
+        An array of observed response counts to signal-present trials.
+    noise : array_like
+        An array of observed response counts to noise trials.
+    equal_variance: bool, Optional
+        Whether the variance of the signal distribution should be equal to that 
+        of the noise distribution, or not. If not, then the signal variance is 
+        considered as an additional parameter to be solved for.
+
+    Attributes
+    ----------
+    https://softwareengineering.stackexchange.com/questions/353004/how-should-i-handle-docstrings-of-subclass-methods
+
+    """
     __modelname__ = 'Equal Variance Signal Detection'
     _has_criteria = True
 
@@ -572,11 +632,36 @@ class SignalDetection(_BaseModel):
         
         self.label = ''.join([i[0] for i in self.__modelname__.split()])
         super().__init__(signal, noise)
-    
-    def __repr__(self):
-        return f"<{self.__class__.__name__}: {self.__modelname__}>"
 
-    def compute_expected(self, d=None, scale=1, criteria=None):
+    def compute_expected(
+            self,
+            d: float,
+            scale: Optional[float]=1,
+            criteria: Optional[array_like]=None
+        ) -> tuple:
+        """Compute the expected signal and noise array using the Signal Detection 
+        model.
+
+        Parameters
+        ----------
+        d : float
+            Sensitivity parameter. Corresponds to the distance between the 
+            signal and noise distributions.
+        scale : float, optional
+            The standard deviation of the signal distribution. The default is 1.
+        criteria : array_like, optional
+            Criterion parameter values. The length corresponds to the number of
+            response categories minus 1 which are solved for. The 
+            default is None.
+
+        Returns
+        -------
+        model_noise : array_like
+            The expected values for the noise array, according to the model.
+        model_signal : array_like
+            The expected values for the signal array, according to the model.
+
+        """
         if criteria is None:
             criteria = np.arange(-5, 5, 0.01)
 
@@ -584,10 +669,89 @@ class SignalDetection(_BaseModel):
         model_noise = stats.norm.cdf(-d / 2 - np.array(criteria), scale=1)
         return model_noise, model_signal
 
+
+class DualProcess(_BaseModel):
+    """Dual Process model class. Inherits functionality from _BaseModel 
+    class.
+    
+    This is a combination of the equal-variance signal detection and the high 
+    threshold models.
+
+    Parameters
+    ----------
+    signal : array_like
+        An array of observed response counts to signal-present trials.
+    noise : array_like
+        An array of observed response counts to noise trials.
+
+    Attributes
+    ----------
+    https://softwareengineering.stackexchange.com/questions/353004/how-should-i-handle-docstrings-of-subclass-methods
+
+    """
+    __modelname__ = 'Dual Process Signal Detection'
+    _has_criteria = True
+
+    def __init__(self, signal, noise):
+        self._named_parameters = {
+            'd': {'initial': 0, 'bounds': (None, None)},
+            'R': {'initial': 0.999, 'bounds': (0, 1)},
+        }
+        self.recollection = None
+        self.familiarity = None
+        
+        self.label = ''.join([i[0] for i in self.__modelname__.split()])
+        super().__init__(signal, noise)
+
+    def compute_expected(
+            self,
+            d: float,
+            R: float,
+            criteria: Optional[array_like]=None
+        ) -> tuple:
+        """Compute the expected signal and noise array using the Dual Process 
+        model.
+        
+        See Yonelinas (1996).
+
+        Parameters
+        ----------
+        d : float
+            Sensitivity parameter. Corresponds to the distance between the 
+            signal and noise distributions. Viewed as an index of familiarity 
+            under the dual-process model.
+        R : float
+            Threshold parameter, corresponding to the probability of 
+            recollection.
+        criteria : array_like, optional
+            Criterion parameter values. The length corresponds to the number of
+            response categories minus 1 which are solved for. The 
+            default is None.
+
+        Returns
+        -------
+        model_noise : array_like
+            The expected values for the noise array, according to the model.
+        model_signal : array_like
+            The expected values for the signal array, according to the model.
+
+        """
+        if criteria is None:
+            criteria = np.arange(-5, 5, 0.01)
+
+        model_noise = stats.norm.cdf(-d / 2 - criteria)
+        model_signal = R + (1 - R) * stats.norm.cdf(d / 2 - criteria)
+        return model_noise, model_signal
+
+
 if __name__ == '__main__':
     
     signal = [505,248,226,172,144,93]
     noise = [115,185,304,523,551,397]
+    
+    ht = HighThreshold(signal, noise)
+    ht.fit()
+    print(ht.results)
     
     evsd = SignalDetection(signal, noise, equal_variance=True)
     evsd.fit()
@@ -597,9 +761,9 @@ if __name__ == '__main__':
     uvsd.fit()
     print(uvsd.results)
 
-    ht = HighThreshold(signal, noise)
-    ht.fit()
-    print(ht.results)
+    dpsd = DualProcess(signal, noise)
+    dpsd.fit()
+    print(dpsd.results)
     
     # Plot
     fig, ax = plt.subplots(dpi=150)
@@ -609,6 +773,7 @@ if __name__ == '__main__':
     ax.plot(*ht.compute_expected(**ht.fitted_parameters), label=ht.label)
     ax.plot(*evsd.compute_expected(**evsd.fitted_parameters), label=evsd.label)
     ax.plot(*uvsd.compute_expected(**uvsd.fitted_parameters), label=uvsd.label)
+    ax.plot(*dpsd.compute_expected(**dpsd.fitted_parameters), label=dpsd.label)
 
     ax.legend(loc='lower right')
     plt.show()
