@@ -630,8 +630,16 @@ class SignalDetection(_BaseModel):
             self.__modelname__ = self.__modelname__.replace('Equal', 'Unequal')
             self._named_parameters['scale'] = {'initial': 1, 'bounds': (1, None)}
         
+        self._scale = 1.0 # Define the scale of the signal distribution
+        
         self.label = ''.join([i[0] for i in self.__modelname__.split()])
         super().__init__(signal, noise)
+    
+    @property
+    def scale(self):
+        # TODO: would be better as self.fitted_parameters.get('scale', 1)
+        # with default fitted_parameters as an empty dict on init.
+        return self._scale
 
     def compute_expected(
             self,
@@ -664,9 +672,12 @@ class SignalDetection(_BaseModel):
         """
         if criteria is None:
             criteria = np.arange(-5, 5, 0.01)
+        
+        self._scale = scale
 
         model_signal = stats.norm.cdf(d / 2 - np.array(criteria), scale=scale)
         model_noise = stats.norm.cdf(-d / 2 - np.array(criteria), scale=1)
+        
         return model_noise, model_signal
 
 
@@ -697,11 +708,19 @@ class DualProcess(_BaseModel):
             'd': {'initial': 0, 'bounds': (None, None)},
             'R': {'initial': 0.999, 'bounds': (0, 1)},
         }
-        self.recollection = None
-        self.familiarity = None
+        self._recollection = None
+        self._familiarity = None
         
         self.label = ''.join([i[0] for i in self.__modelname__.split()])
         super().__init__(signal, noise)
+    
+    @property
+    def familiarity(self):
+        return self._familiarity
+    
+    @property
+    def recollection(self):
+        return self._recollection    
 
     def compute_expected(
             self,
@@ -738,6 +757,11 @@ class DualProcess(_BaseModel):
         """
         if criteria is None:
             criteria = np.arange(-5, 5, 0.01)
+        
+        # Estimate familiarity & recollection
+        signal_boundary = criteria[: int( np.ceil( len( criteria ) / 2 ))][-1]
+        self._familiarity = stats.norm.cdf( d / 2 - signal_boundary )
+        self._recollection = R
 
         model_noise = stats.norm.cdf(-d / 2 - criteria)
         model_signal = R + (1 - R) * stats.norm.cdf(d / 2 - criteria)
