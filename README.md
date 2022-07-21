@@ -37,19 +37,20 @@ To install them, `cd` to the directory with this code in it, and then run `$ pip
 ### Example 2: Receiver operating characteristic (ROC) modelling:
 
 ```python
-from models import SignalDetection
+>>> from models import SignalDetection
 
 # Strongest "signal" <---> Strongest "noise"
 # All responses to signal-present trials
-signal = [505,248,226,172,144,93]
+>>> signal = [505,248,226,172,144,93]
+
 # All responses to signal-absent (i.e. noise) trials
-noise = [115,185,304,523,551,397]
+>>> noise = [115,185,304,523,551,397]
 
 # Create an equal-variance signal detection model
-evsd = SignalDetection(signal, noise)
+>>> evsd = SignalDetection(signal, noise)
 
 # Create an unequal-variance signal detection model
-uvsd = SignalDetection(signal, noise, equal_variance=False)
+>>> uvsd = SignalDetection(signal, noise, equal_variance=False)
 
 ```
 
@@ -62,6 +63,7 @@ Once a model has been instantiated, we can view it in ROC space and see the AUC 
 
 # Just plots the original datapoints
 >>> plot_roc(evsd.p_signal, evsd.p_noise, c='k')
+
 >>> print(evsd.auc)
 0.7439343243677308
 ```
@@ -128,28 +130,28 @@ G^2 (1) = 77.32906147270421, p = 1.4472084997268971e-18
 Finally, we can just view the ROC data and the two fitted models, as follows:
 
 ```python
-import matplotlib.pyplot as plt
+>>> import matplotlib.pyplot as plt
 
-fig, ax = plt.subplots(dpi=150)
+>>> fig, ax = plt.subplots(dpi=150)
 
-ax.plot(
+>>> ax.plot(
         *evsd.compute_expected(evsd.fitted_parameters['d']),
         label=evsd.label
-)
+    )
 
-ax.plot(
+>>> ax.plot(
         *uvsd.compute_expected(
             uvsd.fitted_parameters['d'],
             uvsd.fitted_parameters['scale']
         ),
         label=uvsd.label
-)
+    )
 
 # Just plots the original datapoints
-plot_roc(evsd.p_signal, evsd.p_noise, ax=ax, c='k', zorder=999)
+>>> plot_roc(evsd.p_signal, evsd.p_noise, ax=ax, c='k', zorder=999)
 
-ax.legend(loc='lower right')
-plt.show()
+>>> ax.legend(loc='lower right')
+>>> plt.show()
 
 ```
 
