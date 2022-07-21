@@ -68,6 +68,7 @@ Once a model has been instantiated, we can view it in ROC space and see the AUC 
 ```
 
 ![](_simple_ROC.png)
+<img src="https://github.com/lcdunne/signal-detection/raw/main/_simple_ROC.png" alt="" width="100">
 
 We can fit the two models (`evsd` and `uvsd`) as follows:
 
