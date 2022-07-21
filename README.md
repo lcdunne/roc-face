@@ -153,6 +153,7 @@ Finally, we can just view the ROC data and the two fitted models, as follows:
 >>> plt.show()
 ```
 <img src="https://github.com/lcdunne/signal-detection/raw/main/_example_evsd-uvsd.png" alt="" width="620">
+
 ## Useful links:
 
 [Intro to SDT](https://www.birmingham.ac.uk/Documents/college-les/psych/vision-laboratory/sdtintro.pdf)
