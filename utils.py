@@ -227,11 +227,39 @@ def aic(L: float, k: int):
 
     Returns
     -------
-    TYPE
-        DESCRIPTION.
+    float
+        The AIC score.
 
     """
     return 2 * k - 2 * np.log(L)
+
+def bic(L: float, k: int, n: int):
+    """Computes the Bayesian information criterion (BIC; https://en.wikipedia.org/wiki/Bayesian_information_criterion).
+    
+    Is an estimator of quality of each model relative to others, enabling model 
+    comparison and selection.
+
+    Parameters
+    ----------
+    L : float
+        The maximum value of the likelihood function for the model. In the 
+        present context, this is the sum of the negative log of the errors of 
+        a given model, i.e. sum(-ln(sqrt(squared_errors))).
+    k : int
+        The number of estimated parameters in the model.
+    n : int
+        The number of data points in the observed data.
+
+    Returns
+    -------
+    float
+        The BIC score.
+
+    """
+    return k * np.log(n) - 2 * np.log(L)
+
+
+
 
 def auc(x: array_like, y: array_like):
     """The area under the curve. In the context of ROC curves, it is equal to 

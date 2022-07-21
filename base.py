@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import stats
 from scipy.optimize import minimize
 import legacy_chi2 as legacy_stats
 from utils import *
@@ -36,6 +37,8 @@ class _BaseModel:
         self.acc_noise = accumulate(self.noise)
         self.p_signal = compute_proportions(self.signal)
         self.p_noise = compute_proportions(self.noise)
+        self.z_signal = stats.norm.ppf(self.p_signal)
+        self.z_noise = stats.norm.ppf(self.p_noise)
         self.auc = auc(x=np.append(self.p_noise, 1), y=np.append(self.p_signal, 1))
         
         if not self._named_parameters:
@@ -68,9 +71,14 @@ class _BaseModel:
     
     @property
     def fitted_parameters(self):
-        """dict: Parameters after fitting."""
+        """dict: All parameters and values after fitting."""
         # TODO: Prevent error when calling this before fitting.
         return self._fitted_parameters
+
+    @property
+    def fitted_named_parameters(self):
+        """dict: Named parameters and values after fitting."""
+        return {k: self.fitted_parameters[k] for k in self._named_parameters.keys()}
     
     @property
     def parameter_labels(self):
@@ -90,12 +98,24 @@ class _BaseModel:
             return
         c = list(self._criteria.keys())
         return c.index( c[:int(np.ceil(len(c)/2))][-1] )
-        
     
     @property
     def n_param(self):
         """int: The number of model parameters."""
         return self._n_named_parameters + self.n_criteria
+
+    @property
+    def aic(self):
+        return self._aic
+
+    @property
+    def bic(self):
+        return self._bic
+
+    @property
+    def ddof(self):
+        return len(self.p_signal) + len(self.p_noise) - self.n_param
+    
     
     def define_model_inputs(self, labels: list, values: list, n_criteria: int=0):
         """Maps from flat list of labels and x0 values to dict accepted by the
@@ -299,7 +319,8 @@ class _BaseModel:
         diffs = np.sqrt(self.squared_errors)
         diffs[diffs == 0] = 1                   # hack 1 (prevent infinite values)
         L = np.product(diffs)**-1               # hack 2 (make it fit to the AIC function)
-        self.aic = aic(L=L, k=self.n_param)
+        self._aic = aic(L=L, k=self.n_param)
+        self._bic = bic(L=L, k=self.n_param, n=self.n_signal + self.n_noise)
         
         # Compute the overall euclidean fit
         signal_euclidean = euclidean_distance(self.p_signal, self.expected_p_signal)
@@ -311,7 +332,8 @@ class _BaseModel:
             'model': self.__modelname__,
             'opt-success': self.optimisation_output.success,
             method: self.optimisation_output.fun,
-            'aic': self.aic,
+            'aic': self._aic,
+            'bic': self._bic,
             'euclidean_fit': self.euclidean_fit,
         }
         
