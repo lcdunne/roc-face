@@ -19,7 +19,7 @@ class HighThreshold(_BaseModel):
 
     Attributes
     ----------
-    https://softwareengineering.stackexchange.com/questions/353004/how-should-i-handle-docstrings-of-subclass-methods
+    TODO
 
     """
     __modelname__ = 'High Threshold'
@@ -80,7 +80,7 @@ class SignalDetection(_BaseModel):
 
     Attributes
     ----------
-    https://softwareengineering.stackexchange.com/questions/353004/how-should-i-handle-docstrings-of-subclass-methods
+    TODO
 
     """
     __modelname__ = 'Equal Variance Signal Detection'
@@ -156,8 +156,8 @@ class DualProcess(_BaseModel):
 
     Attributes
     ----------
-    https://softwareengineering.stackexchange.com/questions/353004/how-should-i-handle-docstrings-of-subclass-methods
-
+    TODO
+    
     """
     __modelname__ = 'Dual Process Signal Detection'
     _has_criteria = True
