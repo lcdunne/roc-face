@@ -661,7 +661,7 @@ class SignalDetection(_BaseModel):
             self.__modelname__ = self.__modelname__.replace('Equal', 'Unequal')
             self._named_parameters['scale'] = {'initial': 1, 'bounds': (1, None)}
         
-        self._scale = 1.0 # Define the scale of the signal distribution
+        # self._scale = 1.0 # Define the scale of the signal distribution
         
         self.label = ''.join([i[0] for i in self.__modelname__.split()])
         super().__init__(signal, noise)
@@ -670,7 +670,8 @@ class SignalDetection(_BaseModel):
     def scale(self):
         # TODO: would be better as self.fitted_parameters.get('scale', 1)
         # with default fitted_parameters as an empty dict on init.
-        return self._scale
+        # return self._scale
+        return self.fitted_parameters.get('scale', 1.0)
 
     def compute_expected(
             self,
@@ -703,8 +704,6 @@ class SignalDetection(_BaseModel):
         """
         if criteria is None:
             criteria = np.arange(-5, 5, 0.01)
-        
-        self._scale = scale
 
         model_signal = stats.norm.cdf(d / 2 - np.array(criteria), scale=scale)
         model_noise = stats.norm.cdf(-d / 2 - np.array(criteria), scale=1)
@@ -739,8 +738,6 @@ class DualProcess(_BaseModel):
             'd': {'initial': 0, 'bounds': (None, None)},
             'R': {'initial': 0.999, 'bounds': (0, 1)},
         }
-        self._recollection = None
-        self._familiarity = None
         
         self.label = ''.join([i[0] for i in self.__modelname__.split()])
         super().__init__(signal, noise)
@@ -748,12 +745,18 @@ class DualProcess(_BaseModel):
     @property
     def familiarity(self):
         """float: Estimate of familiarity."""
-        return self._familiarity
+        if not hasattr(self, 'fitted_parameters'):
+            return None
+        d = self.fitted_parameters.get('d')
+        c_x = self.fitted_parameters['criteria'][self.signal_boundary]
+        return stats.norm.cdf( d / 2 - c_x )
     
     @property
     def recollection(self):
         """float: Estimate of recollection."""
-        return self._recollection    
+        if not hasattr(self, 'fitted_parameters'):
+            return None        
+        return self.fitted_parameters.get('R')
 
     def compute_expected(
             self,
@@ -790,19 +793,12 @@ class DualProcess(_BaseModel):
         """
         if criteria is None:
             criteria = np.arange(-5, 5, 0.01)
-        
-        # Estimate familiarity & recollection
-        c = list(evsd._criteria.keys())
-        c[:int(np.ceil(len(c)/2))][-1]
-        
-        # signal_boundary = criteria[: int( np.ceil( len( criteria ) / 2 ))][-1]
-        self._familiarity = stats.norm.cdf( d / 2 - criteria[self.signal_boundary] )
-        self._recollection = R
 
         model_noise = stats.norm.cdf(-d / 2 - criteria)
         model_signal = R + (1 - R) * stats.norm.cdf(d / 2 - criteria)
-        return model_noise, model_signal
 
+        return model_noise, model_signal
+    
 
 if __name__ == '__main__':
     
