@@ -51,7 +51,6 @@ To install them, `cd` to the directory with this code in it, and then run `$ pip
 
 # Create an unequal-variance signal detection model
 >>> uvsd = SignalDetection(signal, noise, equal_variance=False)
-
 ```
 
 Once a model has been instantiated, we can view it in ROC space and see the AUC (note that the AUC corresponds to the observed data, rather than to any specific model, and is therefore identical for the `evsd` and `uvsd`). For example:
@@ -68,7 +67,7 @@ Once a model has been instantiated, we can view it in ROC space and see the AUC 
 0.7439343243677308
 ```
 
-![_simple_ROC.svg](C:\Users\L\Root\projects\signal-detection\_simple_ROC.svg)
+![_simple_ROC.png](C:\Users\L\Root\projects\signal-detection\_simple_ROC.png)
 
 We can fit the two models (`evsd` and `uvsd`) as follows:
 
@@ -152,10 +151,9 @@ Finally, we can just view the ROC data and the two fitted models, as follows:
 
 >>> ax.legend(loc='lower right')
 >>> plt.show()
-
 ```
 
-![_example_evsd-uvsd.svg](C:\Users\L\Root\projects\signal-detection\_example_evsd-uvsd.svg)
+![_example_evsd-uvsd.png](C:\Users\L\Root\projects\signal-detection\_example_evsd-uvsd.png)
 
 
 
