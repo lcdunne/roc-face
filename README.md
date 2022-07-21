@@ -67,7 +67,6 @@ Once a model has been instantiated, we can view it in ROC space and see the AUC 
 0.7439343243677308
 ```
 
-[!data-ROC](https://raw.githubusercontent.com/lcdunne/signal-detection/main/_simple_ROC.png)
 ![](_simple_ROC.png)
 
 We can fit the two models (`evsd` and `uvsd`) as follows:
@@ -153,8 +152,7 @@ Finally, we can just view the ROC data and the two fitted models, as follows:
 >>> ax.legend(loc='lower right')
 >>> plt.show()
 ```
-
-[!model-ROCs](https://raw.githubusercontent.com/lcdunne/signal-detection/main/_example_evsd-uvsd.png)
+![](_example_evsd-uvsd.png)
 
 ## Useful links:
 
