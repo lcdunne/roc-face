@@ -67,8 +67,7 @@ Once a model has been instantiated, we can view it in ROC space and see the AUC 
 0.7439343243677308
 ```
 
-![](_simple_ROC.png)
-<img src="https://github.com/lcdunne/signal-detection/raw/main/_simple_ROC.png" alt="" width="100">
+<img src="https://github.com/lcdunne/signal-detection/raw/main/_simple_ROC.png" alt="" width="500">
 
 We can fit the two models (`evsd` and `uvsd`) as follows:
 
@@ -153,8 +152,7 @@ Finally, we can just view the ROC data and the two fitted models, as follows:
 >>> ax.legend(loc='lower right')
 >>> plt.show()
 ```
-![](_example_evsd-uvsd.png)
-
+<img src="https://github.com/lcdunne/signal-detection/raw/main/_example_evsd-uvsd.png" alt="" width="500">
 ## Useful links:
 
 [Intro to SDT](https://www.birmingham.ac.uk/Documents/college-les/psych/vision-laboratory/sdtintro.pdf)
