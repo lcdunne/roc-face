@@ -4,7 +4,7 @@ Compute basic signal detection measures & fit theoretical models to data. Measur
 
 ## Setting Up
 
-The dependencies can be found in `requirements.txt` and this code needs them to run. I recommend using a virtual environment to isolate the dependencies from your base python installation. For more info [please see this](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/).
+The dependencies can be found in `requirements.txt` and this code needs them to run. I recommend using a virtual environment to isolate the dependencies from your base python installation (for more info [please see this](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/)).
 
 To install them, `cd` to the directory with this code in it, and then run `$ pip install -r requirements.txt`.
 
