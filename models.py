@@ -100,6 +100,7 @@ class SignalDetection(_BaseModel):
     
     @property
     def scale(self):
+        """float: the standard deviation (scale) of the signal distribution."""
         return self.fitted_parameters.get('scale', 1.0)
 
     def compute_expected(
