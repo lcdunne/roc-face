@@ -1,3 +1,4 @@
+"""Code from an older version of SciPy that doesn't raise an exception when frequencies differ."""
 from collections import namedtuple
 import numpy as np
 from scipy import stats, special
