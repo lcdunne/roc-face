@@ -304,6 +304,10 @@ class _BaseModel:
             **self._fitted_parameters
         )
         
+        # Compute the expected counts
+        self.expected_signal = self.expected_p_signal * self.n_signal
+        self.expected_noise = self.expected_p_noise * self.n_noise
+        
         # TODO: After the above, would be nice to have a method to make all stats
         #   like ._make_results()
         
