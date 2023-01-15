@@ -189,26 +189,26 @@ def chitest(O: np.array, E: np.array, N: numeric):
     """
     return (O - E)**2 / E + ((N-O) - (N-E))**2 / (N-E)
 
-def squared_errors(O: np.array, E: np.array):
+def squared_errors(p_o: np.array, p_e: np.array):
     """Computes the sum of squared errors between observed values and those 
     which were computed by the model.
 
     Parameters
     ----------
-    O : array_like
-        An array of accumulated observed counts.
-    E : array_like
-        An array of accumulated expected counts.
+    p_o : array_like
+        Array of (accumulated) observed probabilities.
+    p_e : array_like
+        Array of (accumulated) expected probabilities (from the model).
 
     Returns
     -------
     np.array
-        An array equal to the length of O & E. This contains the computed 
-        squared error values for all pairs of error(Oi, Ei). Each element is an 
-        estimate of the model fit at the given criterion level i. The sum of 
+        An array equal to the length of p_o & p_e. This contains the computed 
+        squared error values for all pairs along the curve. Each element is an 
+        estimate of the model fit at the given criterion point. The sum of 
         these elements is the sum of squared errors.
     """
-    return (O - E)**2
+    return (p_o - p_e)**2
 
 def aic(L: float, k: int):
     """Computes Akaike's information criterion (AIC; https://en.wikipedia.org/wiki/Akaike_information_criterion).

@@ -223,40 +223,34 @@ class _BaseModel:
         expected_noise = expected_p_noise * self.n_noise
 
         # Compute the fit statistic given observed and model-expected data
-        if method == 'log-likelihood':
-            # Use the G^2-test
-            ll_signal = loglik(O=observed_signal, E=expected_signal, N=self.n_signal)
-            ll_noise = loglik(O=observed_noise, E=expected_noise, N=self.n_noise)
-            return sum(ll_signal + ll_noise)
+        # Prepares the inputs to the power divergence function.
+        signal_f_obs = np.array([observed_signal, (self.n_signal - observed_signal)])
+        signal_f_exp = np.array([expected_signal, (self.n_signal - expected_signal)])
+        noise_f_obs = np.array([observed_noise, (self.n_noise - observed_noise)])
+        noise_f_exp = np.array([expected_noise, (self.n_noise - expected_noise)])
         
-        elif method == 'chi':
-            # Use the chi^2 test
-            chi_signal = chitest(observed_signal, expected_signal, self.n_signal)
-            chi_noise = chitest(observed_noise, expected_noise, self.n_noise)
-            return sum(chi_signal + chi_noise)
+        if method.upper == 'G':
+            method = method.upper()
+            signal_g = stats.power_divergence(
+                signal_f_obs,
+                signal_f_exp,
+                lambda_='log-likelihood'
+            )
+            noise_g = stats.power_divergence(
+                noise_f_obs,
+                noise_f_exp,
+                lambda_='log-likelihood'
+            )
+            return sum(signal_g.statistic + noise_g.statistic)
 
         elif method == 'sse':
             # Fit using approach from Yonelinas' spreadsheet
-            sse_signal = squared_errors(observed_signal, expected_signal)
-            sse_noise = squared_errors(observed_noise, expected_noise)
+            sse_signal = squared_errors(self.p_signal, expected_p_signal)
+            sse_noise = squared_errors(self.p_noise, expected_p_noise)
             return sum(sse_signal + sse_noise)
 
-        elif 'legacy' in method:
-            lamb = method.split(' ')[-1] # Gets e.g. 'log-likelihood' (g-test) or 'pearson' (chi-square)
-            # Fit using legacy funcs that allow different sums of all counts
-            ll_signal, _ = legacy_stats.power_divergence(
-                f_obs=[observed_signal, self.n_signal - observed_signal],
-                f_exp=[expected_signal, self.n_signal - expected_signal],
-                lambda_=lamb
-            )
-            ll_noise, _ = legacy_stats.power_divergence(
-                f_obs=[observed_noise, self.n_noise - observed_noise],
-                f_exp=[expected_noise, self.n_noise - expected_noise],
-                lambda_=lamb
-            )
-            return sum(ll_signal) + sum(ll_noise)
     
-    def fit(self, method: Optional[str]='log-likelihood'):
+    def fit(self, method: Optional[str]='G'):
         """Fits the theoretical model to the observed data.
         
         Runs the optimisation function according to the chosen method and 
@@ -270,10 +264,9 @@ class _BaseModel:
 
         Parameters
         ----------
-        method : str, optional
+        method : str
             The name of the objective function. Currently accepted values are 
-            'log-likelihood', 'legacy log-likelihood', 'legacy pearson', 'chi', 
-            and 'sse'. The default is 'log-likelihood'.
+            'G', and 'sse'. The default is 'G'.
 
         Returns
         -------

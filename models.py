@@ -235,19 +235,19 @@ if __name__ == '__main__':
     noise = [115,185,304,523,551,397]
     
     ht = HighThreshold(signal, noise)
-    ht.fit()
+    ht.fit('sse')
     print(ht.results)
     
     evsd = SignalDetection(signal, noise, equal_variance=True)
-    evsd.fit()
+    evsd.fit('sse')
     print(evsd.results)
     
     uvsd = SignalDetection(signal, noise, equal_variance=False)
-    uvsd.fit()
+    uvsd.fit('sse')
     print(uvsd.results)
 
     dpsd = DualProcess(signal, noise)
-    dpsd.fit()
+    dpsd.fit('sse')
     print(dpsd.results)
     
     # Plot
@@ -271,3 +271,9 @@ if __name__ == '__main__':
     ax[1].set(title='Equal Variance', yscale='log', xlabel='criterion',)
     ax[2].set(title='Unequal Variance', yscale='log', xlabel='criterion',)
     plt.show()
+    
+    
+    # # Improvements to fitting
+    # f_obs = np.array([evsd.acc_signal[:-1], (evsd.n_signal - evsd.acc_signal[:-1])])
+    # f_exp = np.array([evsd.expected_signal, (evsd.n_signal - evsd.expected_signal)])
+    # stats.power_divergence(f_obs, f_exp, lambda_=0)
