@@ -1,7 +1,6 @@
 import numpy as np
 from scipy import stats
 from scipy.optimize import minimize
-import legacy_chi2 as legacy_stats
 from utils import *
 
 class _BaseModel:
@@ -33,6 +32,8 @@ class _BaseModel:
         self.noise = noise
         self.n_signal = sum(self.signal)
         self.n_noise = sum(self.noise)
+        if len(self.signal) != len(self.noise):
+            raise ValueError("Signal and noise arrays must have equal length.")
         self.acc_signal = accumulate(self.signal)
         self.acc_noise = accumulate(self.noise)
         self.p_signal = compute_proportions(self.signal)
@@ -172,7 +173,7 @@ class _BaseModel:
         """
         return self.p_noise.copy(), self.p_signal.copy()
 
-    def _objective(self, x0: array_like, method: Optional[str]='log-likelihood') -> float:
+    def _objective(self, x0: array_like, method: Optional[str]='G') -> float:
         """The objective function to minimise. Not intended to be manually 
         called.
         
@@ -229,7 +230,7 @@ class _BaseModel:
         noise_f_obs = np.array([observed_noise, (self.n_noise - observed_noise)])
         noise_f_exp = np.array([expected_noise, (self.n_noise - expected_noise)])
         
-        if method.upper == 'G':
+        if method.upper() == 'G':
             method = method.upper()
             signal_g = stats.power_divergence(
                 signal_f_obs,
