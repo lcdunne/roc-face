@@ -1,7 +1,7 @@
 '''Tests'''
 import pytest
 import numpy as np
-import models
+from .context import models
 
 @pytest.fixture
 def signal_array():
