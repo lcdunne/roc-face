@@ -27,35 +27,45 @@ class _BaseModel:
     _named_parameters = {}
 
     def __init__(self, signal, noise):
-        self.shortname = ''.join([i[0] for i in self.__modelname__.split(' ')])
-        self.signal = signal
-        self.noise = noise
+        # Original observed frequencies
+        self.signal = np.array(signal)
+        self.noise = np.array(noise)
         self.n_signal = sum(self.signal)
         self.n_noise = sum(self.noise)
-        if len(self.signal) != len(self.noise):
-            raise ValueError("Signal and noise arrays must have equal length.")
+        
+        # Accumulated observed frequencies
         self.acc_signal = accumulate(self.signal)
         self.acc_noise = accumulate(self.noise)
+        
+        # Accumulated observed frequencies (prob. space)
         self.p_signal = compute_proportions(self.signal)
         self.p_noise = compute_proportions(self.noise)
+        
+        # Accumulated observed frequencies (z space)
         self.z_signal = stats.norm.ppf(self.p_signal)
         self.z_noise = stats.norm.ppf(self.p_noise)
+        
+        # Observed AUC
         self.auc = auc(x=np.append(self.p_noise, 1), y=np.append(self.p_signal, 1))
         
+        # Dummy parameters in case no model is specified. This is the fully saturated model (not intended for use).
         if not self._named_parameters:
             _s = {f's{i+1}': {'initial': 0, 'bounds': (None, None)} for i, s in enumerate(self.p_signal)}
             _n = {f'n{i+1}': {'initial': 0, 'bounds': (None, None)} for i, s in enumerate(self.p_noise)}
             self._named_parameters = _s | _n
         
-        # if getattr(self, '_has_criteria', False):
-        if self._has_criteria:
+        # Set the criteria for the model if required
+        if self._has_criteria: 
             self.n_criteria = len(self.p_signal)
-            self._criteria = {
-                f"c{i}": {'initial': 0, 'bounds': (None, None)} for i in range(self.n_criteria)
-            }
+            criteria = np.linspace(-0.1, 0.1, self.n_criteria)
+            
+            self._criteria = {}
+            for i, c in enumerate(criteria):
+                self._criteria[f"c{i}"] = {'initial': c, 'bounds': (None, None)}
+
             self._parameters = self._named_parameters | self._criteria
         else:
-            # This will only be the case for high threshold model
+            # Only the case for high threshold model (currently)
             self.n_criteria = 0
             self._parameters = self._named_parameters.copy()
         
@@ -205,50 +215,55 @@ class _BaseModel:
             minimized (i.e. a χ^2, G^2, or sum of squared errors).
 
         """
-        # Get the "observed" counts
-        observed_signal = self.acc_signal[:-1]
-        observed_noise = self.acc_noise[:-1]
-        
-        # Define the model inputs.
+        # Define the model inputs as kwargs for the models' compute_expected method.
         model_input = self.define_model_inputs(
             labels=self.parameter_labels,
-            values=x0, # Not the same as self.x0: this one gets updated
+            values=x0,
             n_criteria=self.n_criteria
         )
+        
         # Compute the expected probabilities using the model function
         expected_p_noise, expected_p_signal = self.compute_expected(**model_input)
         
         # Compute the expected counts
         # TODO: Make this a function because we want to return this as output
-        expected_signal = expected_p_signal * self.n_signal
-        expected_noise = expected_p_noise * self.n_noise
+        expected_signal = prop2freq(expected_p_signal, self.n_signal)
+        expected_noise = prop2freq(expected_p_noise, self.n_noise)
 
         # Compute the fit statistic given observed and model-expected data
         # Prepares the inputs to the power divergence function.
-        signal_f_obs = np.array([observed_signal, (self.n_signal - observed_signal)])
-        signal_f_exp = np.array([expected_signal, (self.n_signal - expected_signal)])
-        noise_f_obs = np.array([observed_noise, (self.n_noise - observed_noise)])
-        noise_f_exp = np.array([expected_noise, (self.n_noise - expected_noise)])
-        
-        if method.upper() == 'G':
-            method = method.upper()
-            signal_g = stats.power_divergence(
-                signal_f_obs,
-                signal_f_exp,
-                lambda_='log-likelihood'
-            )
-            noise_g = stats.power_divergence(
-                noise_f_obs,
-                noise_f_exp,
-                lambda_='log-likelihood'
-            )
-            return sum(signal_g.statistic + noise_g.statistic)
+        # Get the "observed" counts
+        observed_signal = self.acc_signal[:-1]
+        observed_noise = self.acc_noise[:-1]
 
-        elif method == 'sse':
-            # Fit using approach from Yonelinas' spreadsheet
+        signal_f_obs = np.array([observed_signal, self.n_signal - observed_signal])
+        signal_f_exp = np.array([expected_signal, self.n_signal - expected_signal])
+        noise_f_obs = np.array([observed_noise, self.n_noise - observed_noise])
+        noise_f_exp = np.array([expected_noise, self.n_noise - expected_noise])
+        
+        if method.upper() == 'SSE':
             sse_signal = squared_errors(self.p_signal, expected_p_signal)
             sse_noise = squared_errors(self.p_noise, expected_p_noise)
             return sum(sse_signal + sse_noise)
+        
+        elif method.upper() in ['G', 'X2', 'CHI2', 'CHI']:     
+            # lambda_ for power_divergence: 1=chitest, 0=gtest (see SciPy docs)
+            lambda_ = int(method.upper() != 'G') # if true, then converted to 1, else 0
+            
+            signal_stat = stats.power_divergence(
+                signal_f_obs,
+                signal_f_exp,
+                lambda_=lambda_,
+            )
+            
+            noise_stat = stats.power_divergence(
+                noise_f_obs,
+                noise_f_exp,
+                lambda_=lambda_,
+            )
+            return sum(signal_stat.statistic + noise_stat.statistic)
+        else:
+            raise ValueError(f"Method must be one of SSE, X2, or G, but got {method}.")
 
     
     def fit(self, method: Optional[str]='G'):
@@ -286,7 +301,7 @@ class _BaseModel:
         # Take the results
         self.fitted_values = self.optimisation_output.x
 
-        # Define the model inputs        
+        # Define the model inputs as kwargs for models compute_expected        
         self._fitted_parameters = self.define_model_inputs(
             labels=self.parameter_labels,
             values=self.fitted_values,

@@ -11,13 +11,6 @@ def signal_array():
 def noise_array():
     return [115,185,304,523,551,397]
 
-def test_models_fail_with_unequal_length_arrays():
-    with pytest.raises(ValueError):
-        for m in [models.HighThreshold, models.SignalDetection, models.DualProcess]:
-            m([0, 1], [0, 1, 2])
-            m([0, 1, 2], [0, 1])
-    return
-
 def test_all_models(signal_array, noise_array):
     methods = ['g', 'sse']
 
