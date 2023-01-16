@@ -216,6 +216,7 @@ class _BaseModel:
 
         """
         # Define the model inputs as kwargs for the models' compute_expected method.
+        # See the specific model's `compute_expected` for more information.
         model_input = self.define_model_inputs(
             labels=self.parameter_labels,
             values=x0,
@@ -230,16 +231,6 @@ class _BaseModel:
         expected_signal = prop2freq(expected_p_signal, self.n_signal)
         expected_noise = prop2freq(expected_p_noise, self.n_noise)
 
-        # Compute the fit statistic given observed and model-expected data
-        # Prepares the inputs to the power divergence function.
-        # Get the "observed" counts
-        observed_signal = self.acc_signal[:-1]
-        observed_noise = self.acc_noise[:-1]
-
-        signal_f_obs = np.array([observed_signal, self.n_signal - observed_signal])
-        signal_f_exp = np.array([expected_signal, self.n_signal - expected_signal])
-        noise_f_obs = np.array([observed_noise, self.n_noise - observed_noise])
-        noise_f_exp = np.array([expected_noise, self.n_noise - expected_noise])
         
         if method.upper() == 'SSE':
             sse_signal = squared_errors(self.p_signal, expected_p_signal)
@@ -249,19 +240,29 @@ class _BaseModel:
         elif method.upper() in ['G', 'X2', 'CHI2', 'CHI']:     
             # lambda_ for power_divergence: 1=chitest, 0=gtest (see SciPy docs)
             lambda_ = int(method.upper() != 'G') # if true, then converted to 1, else 0
+
+            observed = np.array([
+                self.acc_signal[:-1],
+                self.n_signal - self.acc_signal[:-1],
+                self.acc_noise[:-1],
+                self.n_noise - self.acc_noise[:-1]
+            ])
+
+            expected = np.array([
+                expected_signal,
+                self.n_signal - expected_signal,
+                expected_noise,
+                self.n_noise - expected_noise
+            ])
             
-            signal_stat = stats.power_divergence(
-                signal_f_obs,
-                signal_f_exp,
+            gof = stats.power_divergence(
+                observed,
+                expected,
                 lambda_=lambda_,
             )
-            
-            noise_stat = stats.power_divergence(
-                noise_f_obs,
-                noise_f_exp,
-                lambda_=lambda_,
-            )
-            return sum(signal_stat.statistic + noise_stat.statistic)
+
+            return sum(gof.statistic)
+
         else:
             raise ValueError(f"Method must be one of SSE, X2, or G, but got {method}.")
 
@@ -301,14 +302,14 @@ class _BaseModel:
         # Take the results
         self.fitted_values = self.optimisation_output.x
 
-        # Define the model inputs as kwargs for models compute_expected        
+        # Define the model inputs as kwargs for the model's `compute_expected` method        
         self._fitted_parameters = self.define_model_inputs(
             labels=self.parameter_labels,
             values=self.fitted_values,
             n_criteria=self.n_criteria
         )
 
-        # Compute the expected probabilities using the model function, useful for AIC for example
+        # Compute the expected probabilities using the model's function
         self.expected_p_noise, self.expected_p_signal = self.compute_expected(
             **self._fitted_parameters
         )

@@ -27,7 +27,7 @@ class HighThreshold(_BaseModel):
 
     def __init__(self, signal, noise):
         self._named_parameters = {'R': {'initial': 0.999, 'bounds': (0, 1)}}
-        self._n_named_parameters = len(self._named_parameters) + 1 # Required because `g` parameter is implicit
+        self._n_named_parameters = len(self._named_parameters) + 1 # Required because `g` (guess) parameter is implicit
         self.label = ''.join([i[0] for i in self.__modelname__.split()])
         super().__init__(signal, noise)
     
@@ -57,6 +57,7 @@ class HighThreshold(_BaseModel):
             model_noise = np.array([0, 1])
         else:
             model_noise = self.p_noise
+
         model_signal = (1 - R) * model_noise + R
         return model_noise, model_signal
 
@@ -233,7 +234,7 @@ if __name__ == '__main__':
     
     signal = [505,248,226,172,144,93]
     noise = [115,185,304,523,551,397]
-    fit_method = 'g'
+    fit_method = 'G'
     
     ht = HighThreshold(signal, noise)
     ht.fit(fit_method)
