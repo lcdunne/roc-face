@@ -163,6 +163,11 @@ def loglik(O: np.array, E: np.array, N: numeric):
         # alternative return could be just the sum of this.
         return 2 * O * np.log(O/E) + 2 * (N - O) * np.log((N - O)/(N - E))
 
+def log_likelihood(observed, expected):
+    # The log-likelihood as implemented in the ROC toolbox (see https://github.com/jdkoen/roc_toolbox)
+    # The likelihood in this is defined as the expected probability raised to the power of the observed count.
+    return (observed * np.log(expected)).sum()
+
 def chitest(O: np.array, E: np.array, N: numeric):
     """Computes Pearson's χ^2 test (https://en.wikipedia.org/wiki/Chi-squared_test). 
     Note that this function is equivalent to 

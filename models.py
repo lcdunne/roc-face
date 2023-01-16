@@ -233,21 +233,22 @@ if __name__ == '__main__':
     
     signal = [505,248,226,172,144,93]
     noise = [115,185,304,523,551,397]
+    fit_method = 'G'
     
     ht = HighThreshold(signal, noise)
-    ht.fit()
+    ht.fit(fit_method)
     print(ht.results)
     
     evsd = SignalDetection(signal, noise, equal_variance=True)
-    evsd.fit()
+    evsd.fit(fit_method)
     print(evsd.results)
     
     uvsd = SignalDetection(signal, noise, equal_variance=False)
-    uvsd.fit()
+    uvsd.fit(fit_method)
     print(uvsd.results)
 
     dpsd = DualProcess(signal, noise)
-    dpsd.fit()
+    dpsd.fit(fit_method)
     print(dpsd.results)
     
     # Plot
@@ -272,3 +273,20 @@ if __name__ == '__main__':
     ax[2].set(title='Unequal Variance', yscale='log', xlabel='criterion',)
     plt.show()
     
+    model_names = ['HT', 'EVSD', 'UVSD', 'DPSD']
+    fit_stats = [ht.results['statistic'], evsd.results['statistic'], uvsd.results['statistic'], dpsd.results['statistic']]
+    ll_vals = [-ht.results['log_likelihood'], -evsd.results['log_likelihood'], -uvsd.results['log_likelihood'], -dpsd.results['log_likelihood']]
+    aic_vals = [ht.results['aic'], evsd.results['aic'], uvsd.results['aic'], dpsd.results['aic']]
+    bic_vals = [ht.results['bic'], evsd.results['bic'], uvsd.results['bic'], dpsd.results['bic']]
+    
+    fig, ax = plt.subplots(2, 2, figsize=(9,9), dpi=100)
+    ax[0,0].bar(model_names, fit_stats)
+    ax[0,1].bar(model_names, ll_vals)
+    ax[1,0].bar(model_names, aic_vals)
+    ax[1,1].bar(model_names, bic_vals)
+    ax[0,0].set(ylabel=fit_method)
+    ax[0,1].set(ylabel='-LL', ylim=(min(ll_vals)*.975, max(ll_vals)*1.025))
+    ax[1,0].set(ylabel='AIC', ylim=(min(aic_vals)*.975, max(aic_vals)*1.025))
+    ax[1,1].set(ylabel='BIC', ylim=(min(bic_vals)*.975, max(bic_vals)*1.025))
+    plt.tight_layout()
+    plt.show()

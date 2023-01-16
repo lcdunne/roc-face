@@ -114,7 +114,7 @@ class _BaseModel:
         return self._bic
 
     @property
-    def ddof(self):
+    def dof(self):
         return len(self.p_signal) + len(self.p_noise) - self.n_param
     
     
@@ -313,12 +313,27 @@ class _BaseModel:
             [self.signal_squared_errors, self.noise_squared_errors]
         )
         
-        # Compute the AIC
-        diffs = np.sqrt(self.squared_errors)
-        diffs[diffs == 0] = 1                   # hack 1 (prevent infinite values)
-        L = np.product(diffs)**-1               # hack 2 (make it fit to the AIC function)
-        self._aic = aic(L=L, k=self.n_param)
-        self._bic = bic(L=L, k=self.n_param, n=self.n_signal + self.n_noise)
+        # # Compute the AIC - TODO: may be incorrect ----------------- #
+        # diffs = np.sqrt(self.squared_errors)
+        # diffs[diffs == 0] = 1                   # hack 1 (prevent infinite values)
+        # L = np.product(diffs)**-1               # hack 2 (make it fit to the AIC function)
+        # self._aic = aic(L=L, k=self.n_param)
+        # self._bic = bic(L=L, k=self.n_param, n=self.n_signal + self.n_noise)
+        # Leaving this here for future reference.
+        # ------------------------------------------------------------ #
+        
+        # Compute the -LL, AIC, and BIC
+        signal_LL = log_likelihood(
+            np.array(self.signal),
+            deaccumulate(np.append(self.expected_p_signal, 1))
+        )
+        noise_LL = log_likelihood(
+            np.array(self.noise),
+            deaccumulate(np.append(self.expected_p_noise, 1))
+        )
+        self.LL = signal_LL + noise_LL
+        self._aic = 2 * self.n_param - 2 * self.LL
+        self._bic = self.n_param * np.log(self.n_signal + self.n_noise) - 2 * self.LL
         
         # Compute the overall euclidean fit
         signal_euclidean = euclidean_distance(self.p_signal, self.expected_p_signal)
@@ -329,7 +344,9 @@ class _BaseModel:
         self.results = {
             'model': self.__modelname__,
             'opt-success': self.optimisation_output.success,
-            method: self.optimisation_output.fun,
+            'method': method,
+            'statistic': self.optimisation_output.fun,
+            'log_likelihood': self.LL,
             'aic': self._aic,
             'bic': self._bic,
             'euclidean_fit': self.euclidean_fit,
