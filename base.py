@@ -3,6 +3,37 @@ from scipy import stats
 from scipy.optimize import minimize
 from utils import *
 
+# obs_signal.freqs
+# obs_signal.props
+# obs_signal.freqs_acc
+# obs_signal.props_acc
+
+class ResponseData:
+    def __init__(self, freqs=None, props_acc=None, n=None, corrected=True):
+        if freqs is not None:
+            # Create derivatives based on the observed frequencies
+            self.freqs = np.array(freqs)
+            self.n = sum(freqs)
+            self.corrected = corrected
+            self.props = self.freqs / self.n 
+            self.freqs_acc = accumulate(self.freqs)
+            self.props_acc = compute_proportions(self.freqs, truncate=False, corrected=self.corrected)            
+        elif (props_acc is not None) and (n is not None):
+            # Create all derivatives from the accumulated proportions. Useful 
+            # for deriving expected frequencies based on model predicted 
+            # accumulated propotions.
+            # Note that this is not the reverse of defining ResponseData with 
+            # freqs, unless the `corrected` argument to `compute_proportions` 
+            # is set to True.
+            self.n = n
+            self.corrected = False
+            self.props_acc = np.array(props_acc) if props_acc[-1] == 1.0 else np.append(props_acc, 1)
+            self.freqs_acc = self.props_acc * self.n
+            self.freqs = deaccumulate(self.freqs_acc)
+            self.props = deaccumulate(self.props_acc)
+        else:
+            raise ValueError("Either `freqs` or both of `props_acc` and `n` are required.")
+
 class _BaseModel:
     """Base model class be inherited by all specific model classes. 
     
