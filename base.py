@@ -17,7 +17,8 @@ class ResponseData:
             self.corrected = corrected
             self.props = self.freqs / self.n 
             self.freqs_acc = accumulate(self.freqs)
-            self.props_acc = compute_proportions(self.freqs, truncate=False, corrected=self.corrected)            
+            self.props_acc = compute_proportions(self.freqs, truncate=False, corrected=self.corrected)
+
         elif (props_acc is not None) and (n is not None):
             # Create all derivatives from the accumulated proportions. Useful 
             # for deriving expected frequencies based on model predicted 
@@ -33,6 +34,29 @@ class ResponseData:
             self.props = deaccumulate(self.props_acc)
         else:
             raise ValueError("Either `freqs` or both of `props_acc` and `n` are required.")
+        self.z = stats.norm.ppf(self.roc)
+    
+    def __repr__(self):
+        return self.table.get_string()
+    
+    @property
+    def table(self):
+        return keyval_table(**self.as_dict)
+    
+    @property
+    def as_dict(self):
+        return {
+            'N': self.n,
+            'Freqs.': self.freqs,
+            'Freqs. (Accum.)': self.freqs_acc,
+            'Props.': self.props,
+            'Props. (Accum)': self.props_acc,
+            'z-score': self.z,
+        }
+    
+    @property
+    def roc(self):
+        return self.props_acc[:-1]
 
 class _BaseModel:
     """Base model class be inherited by all specific model classes. 
