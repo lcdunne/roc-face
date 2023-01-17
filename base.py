@@ -3,17 +3,12 @@ from scipy import stats
 from scipy.optimize import minimize
 from utils import *
 
-# obs_signal.freqs
-# obs_signal.props
-# obs_signal.freqs_acc
-# obs_signal.props_acc
-
 class ResponseData:
     def __init__(self, freqs=None, props_acc=None, n=None, corrected=True):
         if freqs is not None:
             # Create derivatives based on the observed frequencies
             self.freqs = np.array(freqs)
-            self.n = sum(freqs)
+            self.n = sum(self.freqs)
             self.corrected = corrected
             self.props = self.freqs / self.n 
             self.freqs_acc = accumulate(self.freqs)
@@ -56,6 +51,8 @@ class ResponseData:
     
     @property
     def roc(self):
+        # Ok to call it ROC? I think so.
+        # Test: create ResponseData from props_acc with and without the 1.0. This should behave well.
         return self.props_acc[:-1]
 
 class _BaseModel:
@@ -82,40 +79,43 @@ class _BaseModel:
     _named_parameters = {}
 
     def __init__(self, signal, noise):
+        self.obs_signal = ResponseData(signal)
+        self.obs_noise = ResponseData(noise)
         # Original observed frequencies
-        self.signal = np.array(signal)
-        self.noise = np.array(noise)
-        self.n_signal = sum(self.signal)
-        self.n_noise = sum(self.noise)
+        # self.signal = np.array(signal)
+        # self.noise = np.array(noise)
+        # self.n_signal = sum(self.signal)
+        # self.n_noise = sum(self.noise)
         
         # Accumulated observed frequencies
-        self.acc_signal = accumulate(self.signal)
-        self.acc_noise = accumulate(self.noise)
+        # self.acc_signal = accumulate(self.signal)
+        # self.acc_noise = accumulate(self.noise)
         
         # Accumulated observed frequencies (prob. space)
-        self.p_signal = compute_proportions(self.signal)
-        self.p_noise = compute_proportions(self.noise)
+        # self.p_signal = compute_proportions(self.signal)
+        # self.p_noise = compute_proportions(self.noise)
         
         # Accumulated observed frequencies (z space)
-        self.z_signal = stats.norm.ppf(self.p_signal)
-        self.z_noise = stats.norm.ppf(self.p_noise)
+        # self.z_signal = stats.norm.ppf(self.p_signal)
+        # self.z_noise = stats.norm.ppf(self.p_noise)
         
         # Observed AUC
-        self.auc = auc(x=np.append(self.p_noise, 1), y=np.append(self.p_signal, 1))
+        self.auc = auc(x=self.obs_noise.props, y=self.obs_signal.props)
         
         # Dummy parameters in case no model is specified. This is the fully saturated model (not intended for use).
         if not self._named_parameters:
-            _s = {f's{i+1}': {'initial': 0, 'bounds': (None, None)} for i, s in enumerate(self.p_signal)}
-            _n = {f'n{i+1}': {'initial': 0, 'bounds': (None, None)} for i, s in enumerate(self.p_noise)}
+            _s = {f's{i+1}': {'initial': 0, 'bounds': (None, None)} for i, s in enumerate(self.obs_signal.props)}
+            _n = {f'n{i+1}': {'initial': 0, 'bounds': (None, None)} for i, s in enumerate(self.obs_noise.props)}
             self._named_parameters = _s | _n
         
         # Set the criteria for the model if required
         if self._has_criteria: 
-            self.n_criteria = len(self.p_signal)
-            criteria = np.linspace(-0.1, 0.1, self.n_criteria)
-            
+            self.n_criteria = len(self.obs_signal.roc)
+            # TODO: Initial starting values for criteria likely need revisiting because can cause model fit errors.
+            # Maybe allow the user to optionally pass in a set of "reasonable" starting values.
+            # Alternatively, check out the approach taken by Koen in the ROC toolbox.
             self._criteria = {}
-            for i, c in enumerate(criteria):
+            for i, c in enumerate(np.linspace(-0.1, 0.1, self.n_criteria)):
                 self._criteria[f"c{i}"] = {'initial': c, 'bounds': (None, None)}
 
             self._parameters = self._named_parameters | self._criteria
@@ -180,9 +180,9 @@ class _BaseModel:
 
     @property
     def dof(self):
-        return len(self.p_signal) + len(self.p_noise) - self.n_param
+        return len(self.obs_signal.roc) + len(self.obs_noise.roc) - self.n_param
     
-    
+    # @classmethod ?
     def define_model_inputs(self, labels: list, values: list, n_criteria: int=0):
         """Maps from flat list of labels and x0 values to dict accepted by the
         `<model>.compute_expected(...)` function.
@@ -236,7 +236,8 @@ class _BaseModel:
             The expected values for the signal array, according to the model.
 
         """
-        return self.p_noise.copy(), self.p_signal.copy()
+        return self.obs_noise.roc.copy(), self.obs_signal.roc.copy()
+
 
     def _objective(self, x0: array_like, method: Optional[str]='G') -> float:
         """The objective function to minimise. Not intended to be manually 
@@ -279,35 +280,36 @@ class _BaseModel:
         )
         
         # Compute the expected probabilities using the model function
+        # exp_noise, exp_signal = self.compute_expected(**model_input) # <-- to return two ResponseData objects
         expected_p_noise, expected_p_signal = self.compute_expected(**model_input)
         
-        # Compute the expected counts
-        # TODO: Make this a function because we want to return this as output
-        expected_signal = prop2freq(expected_p_signal, self.n_signal)
-        expected_noise = prop2freq(expected_p_noise, self.n_noise)
+        self.exp_signal = ResponseData(props_acc=expected_p_signal, n=self.obs_signal.n)
+        self.exp_noise = ResponseData(props_acc=expected_p_noise, n=self.obs_noise.n)
 
+        # expected_signal = prop2freq(expected_p_signal, self.obs_signal.n)
+        # expected_noise = prop2freq(expected_p_noise, self.obs_noise.n)
         
         if method.upper() == 'SSE':
-            sse_signal = squared_errors(self.p_signal, expected_p_signal)
-            sse_noise = squared_errors(self.p_noise, expected_p_noise)
-            return sum(sse_signal + sse_noise)
+            sse_signal = squared_errors(self.obs_signal.roc, self.exp_signal.roc).sum()
+            sse_noise = squared_errors(self.obs_noise.roc, self.exp_noise.roc).sum()
+            return sse_signal + sse_noise
         
         elif method.upper() in ['G', 'X2', 'CHI2', 'CHI']:     
             # lambda_ for power_divergence: 1=chitest, 0=gtest (see SciPy docs)
             lambda_ = int(method.upper() != 'G') # if true, then converted to 1, else 0
 
             observed = np.array([
-                self.acc_signal[:-1],
-                self.n_signal - self.acc_signal[:-1],
-                self.acc_noise[:-1],
-                self.n_noise - self.acc_noise[:-1]
+                self.obs_signal.freqs_acc[:-1],
+                self.obs_signal.n - self.obs_signal.freqs_acc[:-1],
+                self.obs_noise.freqs_acc[:-1],
+                self.obs_noise.n - self.obs_noise.freqs_acc[:-1]
             ])
 
             expected = np.array([
-                expected_signal,
-                self.n_signal - expected_signal,
-                expected_noise,
-                self.n_noise - expected_noise
+                self.exp_signal.freqs_acc[:-1],
+                self.obs_signal.n - self.exp_signal.freqs_acc[:-1],
+                self.exp_noise.freqs_acc[:-1],
+                self.obs_noise.n - self.exp_noise.freqs_acc[:-1]
             ])
             
             gof = stats.power_divergence(
@@ -315,7 +317,7 @@ class _BaseModel:
                 expected,
                 lambda_=lambda_,
             )
-
+            # TODO: want to save the p-value?
             return sum(gof.statistic)
 
         else:
@@ -364,22 +366,22 @@ class _BaseModel:
             n_criteria=self.n_criteria
         )
 
-        # Compute the expected probabilities using the model's function
-        self.expected_p_noise, self.expected_p_signal = self.compute_expected(
-            **self._fitted_parameters
-        )
+        # # Compute the expected probabilities using the model's function
+        # self.expected_p_noise, self.expected_p_signal = self.compute_expected(
+        #     **self._fitted_parameters
+        # )
         
-        # Compute the expected counts
-        self.expected_signal = self.expected_p_signal * self.n_signal
-        self.expected_noise = self.expected_p_noise * self.n_noise
+        # # Compute the expected counts
+        # self.expected_signal = self.expected_p_signal * self.n_signal
+        # self.expected_noise = self.expected_p_noise * self.n_noise
         
         # TODO: After the above, would be nice to have a method to make all stats
         #   like ._make_results()
         
         # Errors
-        self.signal_sse = (self.p_signal - self.expected_p_signal) ** 2
-        self.noise_sse = (self.p_noise - self.expected_p_noise) ** 2
-        self.sse = sum(self.signal_sse) + sum(self.noise_sse)
+        sse_signal = squared_errors(self.obs_signal.roc, self.exp_signal.roc).sum()
+        sse_noise = squared_errors(self.obs_noise.roc, self.exp_noise.roc).sum()
+        self.sse = sse_signal + sse_noise
         
         # # Compute the AIC - TODO: may be incorrect ----------------- #
         # diffs = np.sqrt(self.squared_errors)
@@ -391,17 +393,12 @@ class _BaseModel:
         # ------------------------------------------------------------ #
         
         # Compute the -LL, AIC, and BIC
-        signal_LL = log_likelihood(
-            np.array(self.signal),
-            deaccumulate(np.append(self.expected_p_signal, 1))
-        )
-        noise_LL = log_likelihood(
-            np.array(self.noise),
-            deaccumulate(np.append(self.expected_p_noise, 1))
-        )
+        # Shouldn't this be computed on the accumulated freqs?
+        signal_LL = log_likelihood(self.obs_signal.freqs, self.exp_signal.props)
+        noise_LL = log_likelihood(self.obs_noise.freqs, self.exp_noise.props)
         self.LL = signal_LL + noise_LL
         self._aic = 2 * self.n_param - 2 * self.LL
-        self._bic = self.n_param * np.log(self.n_signal + self.n_noise) - 2 * self.LL
+        self._bic = self.n_param * np.log(self.obs_signal.n + self.obs_noise.n) - 2 * self.LL
         
         # # Compute the overall euclidean fit
         # signal_euclidean = euclidean_distance(self.p_signal, self.expected_p_signal)

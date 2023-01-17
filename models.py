@@ -56,9 +56,11 @@ class HighThreshold(_BaseModel):
         if full:
             model_noise = np.array([0, 1])
         else:
-            model_noise = self.p_noise
+            model_noise = self.obs_noise.roc
 
         model_signal = (1 - R) * model_noise + R
+        
+        # return ResponseData(model_noise), ResponseData(model_signal)
         return model_noise, model_signal
 
 
@@ -137,7 +139,7 @@ class SignalDetection(_BaseModel):
 
         model_signal = stats.norm.cdf(d / 2 - np.array(criteria), scale=scale)
         model_noise = stats.norm.cdf(-d / 2 - np.array(criteria), scale=1)
-        
+        # return ResponseData(model_noise), ResponseData(model_signal)
         return model_noise, model_signal
 
 
@@ -226,7 +228,8 @@ class DualProcess(_BaseModel):
 
         model_noise = stats.norm.cdf(-d / 2 - criteria)
         model_signal = R + (1 - R) * stats.norm.cdf(d / 2 - criteria)
-
+        
+        # return ResponseData(model_noise), ResponseData(model_signal)
         return model_noise, model_signal
     
 
@@ -234,7 +237,7 @@ if __name__ == '__main__':
     
     signal = [505,248,226,172,144,93]
     noise = [115,185,304,523,551,397]
-    fit_method = 'sse'
+    fit_method = 'g'
     
     ht = HighThreshold(signal, noise)
     ht.fit(fit_method)
@@ -255,7 +258,7 @@ if __name__ == '__main__':
     # Plot
     fig, ax = plt.subplots(dpi=150)
 
-    plot_roc(ht.p_signal, ht.p_noise, ax=ax)
+    plot_roc(ht.obs_signal.roc, ht.obs_noise.roc, ax=ax)
     
     ax.plot(*ht.compute_expected(**ht.fitted_parameters), label=ht.label)
     ax.plot(*evsd.compute_expected(**evsd.fitted_parameters), label=evsd.label)
