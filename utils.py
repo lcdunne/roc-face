@@ -16,7 +16,11 @@ def arrays_equal_length(a: array_like, b: array_like):
 def keyval_table(**kwargs):
     t = PrettyTable([0,1])
     for key, val in kwargs.items():
-       t.add_row([key, val])
+        if isinstance(val, np.ndarray):
+            for i, x in enumerate(val):
+                t.add_row([f"{key} {i}", x])
+        else:
+            t.add_row([key, val])
     return t
 
 def accumulate(arr: array_like):
