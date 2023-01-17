@@ -234,7 +234,7 @@ if __name__ == '__main__':
     
     signal = [505,248,226,172,144,93]
     noise = [115,185,304,523,551,397]
-    fit_method = 'G'
+    fit_method = 'sse'
     
     ht = HighThreshold(signal, noise)
     ht.fit(fit_method)
@@ -264,15 +264,6 @@ if __name__ == '__main__':
 
     ax.legend(loc='lower right')
     plt.show()
-    
-    # fig, ax = plt.subplots(1, 3, figsize=(9,4), dpi=100, sharey=True)
-    # ax[0].bar(x=np.arange(1,11), height=ht.squared_errors)
-    # ax[1].bar(x=np.arange(1,11), height=evsd.squared_errors)
-    # ax[2].bar(x=np.arange(1,11), height=uvsd.squared_errors)
-    # ax[0].set(ylabel='Log Euclidean Fit', xlabel='criterion', yscale='log', title='High Threshold')
-    # ax[1].set(title='Equal Variance', yscale='log', xlabel='criterion',)
-    # ax[2].set(title='Unequal Variance', yscale='log', xlabel='criterion',)
-    # plt.show()
     
     model_names = ['HT', 'EVSD', 'UVSD', 'DPSD']
     fit_stats = [ht.results['statistic'], evsd.results['statistic'], uvsd.results['statistic'], dpsd.results['statistic']]

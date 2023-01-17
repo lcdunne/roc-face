@@ -322,12 +322,9 @@ class _BaseModel:
         #   like ._make_results()
         
         # Errors
-        # Individual signal & noise are also useful for looking at fits (e.g. plotting "euclidean fit")
-        self.signal_squared_errors = (self.p_signal - self.expected_p_signal) ** 2
-        self.noise_squared_errors = (self.p_noise - self.expected_p_noise) ** 2
-        self.squared_errors = np.concatenate(
-            [self.signal_squared_errors, self.noise_squared_errors]
-        )
+        self.signal_sse = (self.p_signal - self.expected_p_signal) ** 2
+        self.noise_sse = (self.p_noise - self.expected_p_noise) ** 2
+        self.sse = sum(self.signal_sse) + sum(self.noise_sse)
         
         # # Compute the AIC - TODO: may be incorrect ----------------- #
         # diffs = np.sqrt(self.squared_errors)
@@ -351,10 +348,10 @@ class _BaseModel:
         self._aic = 2 * self.n_param - 2 * self.LL
         self._bic = self.n_param * np.log(self.n_signal + self.n_noise) - 2 * self.LL
         
-        # Compute the overall euclidean fit
-        signal_euclidean = euclidean_distance(self.p_signal, self.expected_p_signal)
-        noise_euclidean = euclidean_distance(self.p_noise, self.expected_p_noise)
-        self.euclidean_fit = signal_euclidean + noise_euclidean
+        # # Compute the overall euclidean fit
+        # signal_euclidean = euclidean_distance(self.p_signal, self.expected_p_signal)
+        # noise_euclidean = euclidean_distance(self.p_noise, self.expected_p_noise)
+        # self.euclidean_fit = signal_euclidean + noise_euclidean
         
         # TODO: Define nice results output
         self.results = {
@@ -365,7 +362,8 @@ class _BaseModel:
             'log_likelihood': self.LL,
             'aic': self._aic,
             'bic': self._bic,
-            'euclidean_fit': self.euclidean_fit,
+            'SSE': self.sse,
+            # 'euclidean_fit': self.euclidean_fit,
         }
         
         return self.fitted_parameters
