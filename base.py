@@ -70,7 +70,6 @@ class _BaseModel:
 
     Attributes
     ----------
-    
 
     """
     # Defaults
@@ -81,25 +80,6 @@ class _BaseModel:
     def __init__(self, signal, noise):
         self.obs_signal = ResponseData(signal)
         self.obs_noise = ResponseData(noise)
-        # Original observed frequencies
-        # self.signal = np.array(signal)
-        # self.noise = np.array(noise)
-        # self.n_signal = sum(self.signal)
-        # self.n_noise = sum(self.noise)
-        
-        # Accumulated observed frequencies
-        # self.acc_signal = accumulate(self.signal)
-        # self.acc_noise = accumulate(self.noise)
-        
-        # Accumulated observed frequencies (prob. space)
-        # self.p_signal = compute_proportions(self.signal)
-        # self.p_noise = compute_proportions(self.noise)
-        
-        # Accumulated observed frequencies (z space)
-        # self.z_signal = stats.norm.ppf(self.p_signal)
-        # self.z_noise = stats.norm.ppf(self.p_noise)
-        
-        # Observed AUC
         self.auc = auc(x=self.obs_noise.props, y=self.obs_signal.props)
         
         # Dummy parameters in case no model is specified. This is the fully saturated model (not intended for use).
@@ -280,14 +260,10 @@ class _BaseModel:
         )
         
         # Compute the expected probabilities using the model function
-        # exp_noise, exp_signal = self.compute_expected(**model_input) # <-- to return two ResponseData objects
         expected_p_noise, expected_p_signal = self.compute_expected(**model_input)
         
         self.exp_signal = ResponseData(props_acc=expected_p_signal, n=self.obs_signal.n)
         self.exp_noise = ResponseData(props_acc=expected_p_noise, n=self.obs_noise.n)
-
-        # expected_signal = prop2freq(expected_p_signal, self.obs_signal.n)
-        # expected_noise = prop2freq(expected_p_noise, self.obs_noise.n)
         
         if method.upper() == 'SSE':
             sse_signal = squared_errors(self.obs_signal.roc, self.exp_signal.roc).sum()
@@ -365,15 +341,6 @@ class _BaseModel:
             values=self.fitted_values,
             n_criteria=self.n_criteria
         )
-
-        # # Compute the expected probabilities using the model's function
-        # self.expected_p_noise, self.expected_p_signal = self.compute_expected(
-        #     **self._fitted_parameters
-        # )
-        
-        # # Compute the expected counts
-        # self.expected_signal = self.expected_p_signal * self.n_signal
-        # self.expected_noise = self.expected_p_noise * self.n_noise
         
         # TODO: After the above, would be nice to have a method to make all stats
         #   like ._make_results()

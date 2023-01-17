@@ -60,7 +60,6 @@ class HighThreshold(_BaseModel):
 
         model_signal = (1 - R) * model_noise + R
         
-        # return ResponseData(model_noise), ResponseData(model_signal)
         return model_noise, model_signal
 
 
@@ -95,8 +94,6 @@ class SignalDetection(_BaseModel):
         if not equal_variance:
             self.__modelname__ = self.__modelname__.replace('Equal', 'Unequal')
             self._named_parameters['scale'] = {'initial': 1, 'bounds': (1, None)}
-        
-        # self._scale = 1.0 # Define the scale of the signal distribution
         
         self.label = ''.join([i[0] for i in self.__modelname__.split()])
         super().__init__(signal, noise)
@@ -139,7 +136,7 @@ class SignalDetection(_BaseModel):
 
         model_signal = stats.norm.cdf(d / 2 - np.array(criteria), scale=scale)
         model_noise = stats.norm.cdf(-d / 2 - np.array(criteria), scale=1)
-        # return ResponseData(model_noise), ResponseData(model_signal)
+        
         return model_noise, model_signal
 
 
@@ -228,8 +225,7 @@ class DualProcess(_BaseModel):
 
         model_noise = stats.norm.cdf(-d / 2 - criteria)
         model_signal = R + (1 - R) * stats.norm.cdf(d / 2 - criteria)
-        
-        # return ResponseData(model_noise), ResponseData(model_signal)
+
         return model_noise, model_signal
     
 
