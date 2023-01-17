@@ -383,15 +383,6 @@ class _BaseModel:
         sse_noise = squared_errors(self.obs_noise.roc, self.exp_noise.roc).sum()
         self.sse = sse_signal + sse_noise
         
-        # # Compute the AIC - TODO: may be incorrect ----------------- #
-        # diffs = np.sqrt(self.squared_errors)
-        # diffs[diffs == 0] = 1                   # hack 1 (prevent infinite values)
-        # L = np.product(diffs)**-1               # hack 2 (make it fit to the AIC function)
-        # self._aic = aic(L=L, k=self.n_param)
-        # self._bic = bic(L=L, k=self.n_param, n=self.n_signal + self.n_noise)
-        # Leaving this here for future reference.
-        # ------------------------------------------------------------ #
-        
         # Compute the -LL, AIC, and BIC
         # Shouldn't this be computed on the accumulated freqs?
         signal_LL = log_likelihood(self.obs_signal.freqs, self.exp_signal.props)
