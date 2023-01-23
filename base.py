@@ -97,11 +97,10 @@ class _BaseModel:
         # Set the criteria for the model if required
         if self._has_criteria: 
             self.n_criteria = len(self.obs_signal.roc)
-            # TODO: Initial starting values for criteria likely need revisiting because can cause model fit errors.
             # Maybe allow the user to optionally pass in a set of "reasonable" starting values.
-            # Alternatively, check out the approach taken by Koen in the ROC toolbox.
+            # Reasonable starting parameters seem to be equally-spaced between +/-1.5.
             self._criteria = {}
-            for i, c in enumerate(np.linspace(-0.1, 0.1, self.n_criteria)):
+            for i, c in enumerate(np.linspace(1.5, -1.5, self.n_criteria)):
                 self._criteria[f"c{i}"] = {'initial': c, 'bounds': (None, None)}
 
             self._parameters = self._named_parameters | self._criteria
@@ -225,7 +224,7 @@ class _BaseModel:
         return self.obs_noise.roc.copy(), self.obs_signal.roc.copy()
 
 
-    def _objective(self, x0: array_like, method: Optional[str]='G') -> float:
+    def _objective(self, x0: array_like, method: Optional[str]='G', alt: Optional[bool]=True) -> float:
         """The objective function to minimise. Not intended to be manually 
         called.
         
@@ -249,6 +248,19 @@ class _BaseModel:
             the objective function is then calculated.
         method : str, optional
             See the .fit method for details. The default is 'log-likelihood'.
+        alt : bool, optional
+            Use alternative inputs to goodness-of-fit function. If False, the 
+            inputs are simply the observed and expected non-cumulative 
+            frequencies for each rating category. If True, the inputs are the 
+            observed and expected cumulative frequencies for each rating 
+            category, in addition to the complement for that category, which 
+            is calculated as N - f where N is the total number of responses for 
+            that stimulus class and f is the observed frequency. This method 
+            yields comparable fit statistics to the standard approach in most 
+            cases, but it additionally fits the high threshold model 
+            successfully (unlike the standard approach). Note that the 
+            fitted statistics will be slightly different from those obtained 
+            with the ROC toolbox. The default is True.
 
         Returns
         -------
@@ -267,46 +279,43 @@ class _BaseModel:
         
         # Compute the expected probabilities using the model function
         expected_p_noise, expected_p_signal = self.compute_expected(**model_input)
-        
         self.exp_signal = ResponseData(props_acc=expected_p_signal, n=self.obs_signal.n)
         self.exp_noise = ResponseData(props_acc=expected_p_noise, n=self.obs_noise.n)
         
+        # Prepare the inputs for goodness-of-fit testing
+        if alt:
+            observed_signal = np.array([self.obs_signal.freqs_acc[:-1], self.obs_signal.n - self.obs_signal.freqs_acc[:-1]])
+            observed_noise = np.array([self.obs_noise.freqs_acc[:-1], self.obs_noise.n - self.obs_noise.freqs_acc[:-1]])
+            expected_signal = np.array([self.exp_signal.freqs_acc[:-1], self.obs_signal.n - self.exp_signal.freqs_acc[:-1]])
+            expected_noise = np.array([self.exp_noise.freqs_acc[:-1], self.obs_noise.n - self.exp_noise.freqs_acc[:-1]])
+        else:
+            observed_signal = self.obs_signal.freqs
+            observed_noise = self.obs_noise.freqs
+            # Correct expected freqs. of 0 to prevent division errors
+            expected_signal = np.where(self.exp_signal.freqs == 0, 1e-100, self.exp_signal.freqs)
+            expected_noise = np.where(self.exp_noise.freqs == 0, 1e-100, self.exp_noise.freqs)
+            
+        # Compute the goodness-of-fit
         if method.upper() == 'SSE':
-            sse_signal = squared_errors(self.obs_signal.roc, self.exp_signal.roc).sum()
-            sse_noise = squared_errors(self.obs_noise.roc, self.exp_noise.roc).sum()
+            sse_signal = squared_errors(observed_signal, expected_signal).sum()
+            sse_noise = squared_errors(observed_noise, expected_noise).sum()
             return sse_signal + sse_noise
         
         elif method.upper() in ['G', 'X2', 'CHI2', 'CHI']:     
-            # lambda_ for power_divergence: 1=chitest, 0=gtest (see SciPy docs)
             lambda_ = int(method.upper() != 'G') # if true, then converted to 1, else 0
-
-            observed = np.array([
-                self.obs_signal.freqs_acc[:-1],
-                self.obs_signal.n - self.obs_signal.freqs_acc[:-1],
-                self.obs_noise.freqs_acc[:-1],
-                self.obs_noise.n - self.obs_noise.freqs_acc[:-1]
-            ])
-
-            expected = np.array([
-                self.exp_signal.freqs_acc[:-1],
-                self.obs_signal.n - self.exp_signal.freqs_acc[:-1],
-                self.exp_noise.freqs_acc[:-1],
-                self.obs_noise.n - self.exp_noise.freqs_acc[:-1]
-            ])
-            
-            gof = stats.power_divergence(
-                observed,
-                expected,
-                lambda_=lambda_,
-            )
-            # TODO: want to save the p-value?
-            return sum(gof.statistic)
-
+            gof_signal = stats.power_divergence(observed_signal, expected_signal, lambda_=lambda_)            
+            gof_noise = stats.power_divergence(observed_noise, expected_noise, lambda_=lambda_)
+            return np.sum(gof_signal.statistic) + np.sum(gof_noise.statistic)
+        elif method.upper() in ['LL', '-LL', 'loglik','log-likelihood']:
+            # LL and -LL are interpreted the same (minimization must occur on the -LL)
+            # 'log-likelihood', when used as `lambda_` in the `power_divergence` test actually refers to the g-test.
+            ll_signal = log_likelihood(observed_signal, expected_signal)
+            ll_noise = log_likelihood(observed_noise, expected_noise)
+            return -ll_signal - ll_noise
         else:
             raise ValueError(f"Method must be one of SSE, X2, or G, but got {method}.")
 
-    
-    def fit(self, method: Optional[str]='G'):
+    def fit(self, method: Optional[str]='G', alt: Optional[bool]=True):
         """Fits the theoretical model to the observed data.
         
         Runs the optimisation function according to the chosen method and 
@@ -330,16 +339,24 @@ class _BaseModel:
             The fitted parameters.
 
         """
+        self.fit_method = method
+        
         # Run the fit function
         self.optimisation_output = minimize(
             fun=self._objective,
             x0=list(self.initial_parameters.values()),
-            args=(method),
+            args=(self.fit_method, alt),
             bounds=self.parameter_boundaries,
-            tol=1e-6
+            method='nelder-mead',
+            tol=1e-6,
         )
+        
         # Take the results
         self.fitted_values = self.optimisation_output.x
+        self.statistic = self.optimisation_output.fun
+        self.fit_success = self.optimisation_output.success
+        if not self.fit_success:
+            print(f"Fit failed for {self.__modelname__} model.")
 
         # Define the model inputs as kwargs for the model's `compute_expected` method        
         self._fitted_parameters = self.define_model_inputs(
@@ -372,12 +389,12 @@ class _BaseModel:
         # TODO: Define nice results output
         self.results = {
             'model': self.__modelname__,
-            'opt-success': self.optimisation_output.success,
-            'method': method,
-            'statistic': self.optimisation_output.fun,
+            'fit-success': self.fit_success,
+            'fit-method': method,
+            'statistic': self.statistic,
             'log_likelihood': self.LL,
-            'aic': self._aic,
-            'bic': self._bic,
+            'AIC': self._aic,
+            'BIC': self._bic,
             'SSE': self.sse,
             # 'euclidean_fit': self.euclidean_fit,
         }
