@@ -15,7 +15,7 @@ class ResponseData:
             self.props_acc = compute_proportions(self.freqs, truncate=False, corrected=self.corrected)
 
         elif (props_acc is not None) and (n is not None):
-            # Create all derivatives from the accumulated proportions. Useful 
+            # Create all derived vars from the accumulated proportions. Useful 
             # for deriving expected frequencies based on model predicted 
             # accumulated propotions.
             # Note that this is not the reverse of defining ResponseData with 
@@ -23,7 +23,7 @@ class ResponseData:
             # is set to True.
             self.n = n
             self.corrected = False
-            self.props_acc = np.array(props_acc) if props_acc[-1] == 1.0 else np.append(props_acc, 1)
+            self.props_acc = np.append(props_acc, 1)
             self.freqs_acc = self.props_acc * self.n
             self.freqs = deaccumulate(self.freqs_acc)
             self.props = deaccumulate(self.props_acc)
@@ -54,6 +54,12 @@ class ResponseData:
         # Ok to call it ROC? I think so.
         # Test: create ResponseData from props_acc with and without the 1.0. This should behave well.
         return self.props_acc[:-1]
+
+class GenericDataContainer:
+    def __init__(self, **kwargs):
+        self._inputs = kwargs
+        for k, v in self._inputs.items():
+            setattr(self, k, v)
 
 class _BaseModel:
     """Base model class be inherited by all specific model classes. 
