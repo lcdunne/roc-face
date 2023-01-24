@@ -2,6 +2,7 @@ import numpy as np
 from prettytable import PrettyTable
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
+from scipy import stats
 from typing import Union, Optional
 
 numeric = Union[int, float, np.number]
@@ -139,8 +140,10 @@ def plot_roc(
     ax.set(xlabel='FP', ylabel='TP')
     return ax
 
-def plot_zroc(z_signal, z_noise, poly=1, reg=True, data=True, ax=None, **kwargs):
-    print(z_signal, z_noise)
+def plot_zroc(signal, noise, poly=1, reg=True, data=True, ax=None, **kwargs):
+    z_signal = stats.norm.ppf(signal)
+    z_noise = stats.norm.ppf(noise)
+    
     if ax is None:
         fig, ax = plt.subplots()
     

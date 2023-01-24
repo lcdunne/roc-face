@@ -59,6 +59,6 @@ ax[0].plot(*dpsd.compute_expected(**dpsd.fitted_named_parameters), label='DPSD')
 
 ax[0].legend(loc='lower right')
 
-utils.plot_zroc(ht.obs_signal.z, ht.obs_noise.z, poly=2, c='k', ax=ax[1])
+utils.plot_zroc(ht.obs_signal.roc, ht.obs_noise.roc, poly=2, c='k', ax=ax[1])
 plt.tight_layout()
 plt.show()
