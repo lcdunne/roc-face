@@ -26,7 +26,7 @@ class HighThreshold(_BaseModel):
     _has_criteria = False
 
     def __init__(self, signal, noise):
-        self._named_parameters = {'R': {'initial': 0.999, 'bounds': (0, 1)}}
+        self._named_parameters = {'R': {'initial': 0.99, 'bounds': (0, 1)}}
         self._n_named_parameters = len(self._named_parameters) + 1 # Required because `g` (guess) parameter is implicit
         self.label = ''.join([i[0] for i in self.__modelname__.split()])
         super().__init__(signal, noise)
@@ -89,7 +89,10 @@ class SignalDetection(_BaseModel):
     _has_criteria = True
 
     def __init__(self, signal, noise, equal_variance=True):
-        self._named_parameters = {'d': {'initial': 0, 'bounds': (None, None)}}
+        self._named_parameters = {
+            'd': {'initial': 1, 'bounds': (None, None)}, # d may need to start above the likely value for convergence with some fit statistics
+            # 'scale': {'initial': 1, 'bounds': (1, 1 if equal_variance else None)},
+        }
         
         if not equal_variance:
             self.__modelname__ = self.__modelname__.replace('Equal', 'Unequal')
@@ -164,7 +167,7 @@ class DualProcess(_BaseModel):
 
     def __init__(self, signal, noise):
         self._named_parameters = {
-            'd': {'initial': 0, 'bounds': (None, None)},
+            'd': {'initial': 1, 'bounds': (None, None)},
             'R': {'initial': 0.999, 'bounds': (0, 1)},
         }
         
