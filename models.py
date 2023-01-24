@@ -236,51 +236,40 @@ if __name__ == '__main__':
     
     signal = [505,248,226,172,144,93]
     noise = [115,185,304,523,551,397]
-    fit_method = 'g'
+
+    fit_method = 'G'
+    alt = True # When false, matches ROC toolbox but gives poor fit for HT model.
     
     ht = HighThreshold(signal, noise)
-    ht.fit(fit_method)
+    ht.fit(fit_method, alt=alt)
     print(ht.results)
     
     evsd = SignalDetection(signal, noise, equal_variance=True)
-    evsd.fit(fit_method)
+    evsd.fit(fit_method, alt=alt)
     print(evsd.results)
     
     uvsd = SignalDetection(signal, noise, equal_variance=False)
-    uvsd.fit(fit_method)
+    uvsd.fit(fit_method, alt=alt)
     print(uvsd.results)
 
     dpsd = DualProcess(signal, noise)
-    dpsd.fit(fit_method)
+    dpsd.fit(fit_method, alt=alt)
     print(dpsd.results)
     
-    # Plot
+    # Plot ROC curves
     fig, ax = plt.subplots(dpi=150)
-
-    plot_roc(ht.obs_signal.roc, ht.obs_noise.roc, ax=ax)
-    
+    plot_roc(evsd.obs_signal.roc, evsd.obs_noise.roc, ax=ax)
     ax.plot(*ht.compute_expected(**ht.fitted_parameters), label=ht.label)
     ax.plot(*evsd.compute_expected(**evsd.fitted_parameters), label=evsd.label)
     ax.plot(*uvsd.compute_expected(**uvsd.fitted_parameters), label=uvsd.label)
     ax.plot(*dpsd.compute_expected(**dpsd.fitted_parameters), label=dpsd.label)
-
     ax.legend(loc='lower right')
     plt.show()
     
-    model_names = ['HT', 'EVSD', 'UVSD', 'DPSD']
-    fit_stats = [ht.results['statistic'], evsd.results['statistic'], uvsd.results['statistic'], dpsd.results['statistic']]
-    ll_vals = [-ht.results['log_likelihood'], -evsd.results['log_likelihood'], -uvsd.results['log_likelihood'], -dpsd.results['log_likelihood']]
-    aic_vals = [ht.results['aic'], evsd.results['aic'], uvsd.results['aic'], dpsd.results['aic']]
-    bic_vals = [ht.results['bic'], evsd.results['bic'], uvsd.results['bic'], dpsd.results['bic']]
-    
-    fig, ax = plt.subplots(2, 2, figsize=(9,9), dpi=100)
-    ax[0,0].bar(model_names, fit_stats)
-    ax[0,1].bar(model_names, ll_vals)
-    ax[1,0].bar(model_names, aic_vals)
-    ax[1,1].bar(model_names, bic_vals)
-    ax[0,0].set(ylabel=fit_method)
-    ax[0,1].set(ylabel='-LL', ylim=(min(ll_vals)*.975, max(ll_vals)*1.025))
-    ax[1,0].set(ylabel='AIC', ylim=(min(aic_vals)*.975, max(aic_vals)*1.025))
-    ax[1,1].set(ylabel='BIC', ylim=(min(bic_vals)*.975, max(bic_vals)*1.025))
+    # Plot convergence for each model
+    fig, ax = plt.subplots(2,2, dpi=150)
+    for axis, model in zip(ax.flatten(), [ht, evsd, uvsd, dpsd]):
+        axis.plot(model.convergence)
+        axis.set(xlabel='iteration', ylabel=fit_method, title=model.label)    
     plt.tight_layout()
     plt.show()
