@@ -87,6 +87,7 @@ class _BaseModel:
         self.obs_signal = ResponseData(signal)
         self.obs_noise = ResponseData(noise)
         self.auc = auc(x=self.obs_noise.props, y=self.obs_signal.props)
+        self.convergence = []
         
         # Dummy parameters in case no model is specified. This is the fully saturated model (not intended for use).
         if not self._named_parameters:
@@ -297,21 +298,29 @@ class _BaseModel:
             
         # Compute the goodness-of-fit
         if method.upper() == 'SSE':
+            # The ROC toolbox uses: (.obs_*.props - .exp_*.props)**2
+            # The DPSDSSE spreadsheed uses: (.obs_*.roc - .exp_*.roc)**2
             sse_signal = squared_errors(observed_signal, expected_signal).sum()
             sse_noise = squared_errors(observed_noise, expected_noise).sum()
-            return sse_signal + sse_noise
+            SSE = sse_signal + sse_noise
+            self.convergence.append(SSE)
+            return SSE
         
         elif method.upper() in ['G', 'X2', 'CHI2', 'CHI']:     
             lambda_ = int(method.upper() != 'G') # if true, then converted to 1, else 0
             gof_signal = stats.power_divergence(observed_signal, expected_signal, lambda_=lambda_)            
             gof_noise = stats.power_divergence(observed_noise, expected_noise, lambda_=lambda_)
-            return np.sum(gof_signal.statistic) + np.sum(gof_noise.statistic)
+            gof = np.sum(gof_signal.statistic) + np.sum(gof_noise.statistic)
+            self.convergence.append(gof)
+            return gof
         elif method.upper() in ['LL', '-LL', 'loglik','log-likelihood']:
             # LL and -LL are interpreted the same (minimization must occur on the -LL)
             # 'log-likelihood', when used as `lambda_` in the `power_divergence` test actually refers to the g-test.
             ll_signal = log_likelihood(observed_signal, expected_signal)
             ll_noise = log_likelihood(observed_noise, expected_noise)
-            return -ll_signal - ll_noise
+            LL = ll_signal + ll_noise
+            self.convergence.append(LL)
+            return -LL
         else:
             raise ValueError(f"Method must be one of SSE, X2, or G, but got {method}.")
 
@@ -348,7 +357,8 @@ class _BaseModel:
             args=(self.fit_method, alt),
             bounds=self.parameter_boundaries,
             method='nelder-mead',
-            tol=1e-6,
+            tol=1e-4,
+            options={'maxiter': 100000, 'xatol': 1e-8 ,'fatol': 1e-4}
         )
         
         # Take the results
