@@ -95,9 +95,6 @@ def compute_proportions(
 
     return np.array(f)
 
-def prop2freq(p, N):
-    return p * N
-
 def euclidean_distance(x: np.array, y: np.array):
     return np.sqrt(sum((y - x)**2))
 
@@ -202,108 +199,126 @@ def plot_zroc(z_signal, z_noise, poly=1, reg=True, data=True, ax=None, **kwargs)
 #         # alternative return could be just the sum of this.
 #         return 2 * O * np.log(O/E) + 2 * (N - O) * np.log((N - O)/(N - E))
 
-def log_likelihood(observed, expected):
-    # The log-likelihood as implemented in the ROC toolbox (see https://github.com/jdkoen/roc_toolbox)
-    # The likelihood in this is defined as the expected probability raised to the power of the observed count.
-    return (observed * np.log(expected)).sum()
-
-def chitest(O: np.array, E: np.array, N: numeric):
-    """Computes Pearson's χ^2 test (https://en.wikipedia.org/wiki/Chi-squared_test). 
-    Note that this function is equivalent to 
-    `scipy.stats.power_divergence(f_obs, f_exp, ... lambda_='pearson')`.
-
+def log_likelihood(f_obs, p_exp):
+    """Computes the Log Likelihood 
+    
+    This is the log likelihood function that appears on page 145 of Dunn (2011) 
+    and is also used in the ROC toolbox of Koen, Barrett, Harlow, & Yonelinas 
+    (2017; see https://github.com/jdkoen/roc_toolbox). The calculation is:
+        
+        $\sum_i^{j}O_i\log(P_i)$ where $j$ refers the number of response 
+        categories.
+    
     Parameters
     ----------
-    O : array_like
-        An array of accumulated observed counts.
-    E : array_like
-        An array of accumulated expected counts.
-    N : numeric
-        The total number of responses for the set. As currently implemented,
-        O is truncated and will not contain the total N at O[-1], so N must be 
-        passed explicitly. This may be changed in a future implementation.
+    f_obs : TYPE
+        The observed frequencies (counts; non-cumulative) for each of the 
+        response categories.
+    p_exp : TYPE
+        The expected probabilities (non-cumulative) for each of the response 
+        categories.
 
     Returns
     -------
-    np.array
-        An array equal to the length of O & E. This contains the computed χ^2 
-        values for all pairs of χ^2(Oi, Ei). Each element is an estimate of the 
-        model fit at the given criterion level i. The sum of these elements is 
-        the sum of χ^2, which can then be further analysed.
-    """
-    return (O - E)**2 / E + ((N-O) - (N-E))**2 / (N-E)
+    log_likelihood : float
+        The log likelihood value for the given inputs.
 
-def squared_errors(p_o: np.array, p_e: np.array):
+    """
+    
+    return (np.array(f_obs) * np.log(np.array(p_exp))).sum()
+
+# def chitest(O: np.array, E: np.array, N: numeric):
+#     """Computes Pearson's χ^2 test (https://en.wikipedia.org/wiki/Chi-squared_test). 
+#     Note that this function is equivalent to 
+#     `scipy.stats.power_divergence(f_obs, f_exp, ... lambda_='pearson')`.
+
+#     Parameters
+#     ----------
+#     O : array_like
+#         An array of accumulated observed counts.
+#     E : array_like
+#         An array of accumulated expected counts.
+#     N : numeric
+#         The total number of responses for the set. As currently implemented,
+#         O is truncated and will not contain the total N at O[-1], so N must be 
+#         passed explicitly. This may be changed in a future implementation.
+
+#     Returns
+#     -------
+#     np.array
+#         An array equal to the length of O & E. This contains the computed χ^2 
+#         values for all pairs of χ^2(Oi, Ei). Each element is an estimate of the 
+#         model fit at the given criterion level i. The sum of these elements is 
+#         the sum of χ^2, which can then be further analysed.
+#     """
+#     return (O - E)**2 / E + ((N-O) - (N-E))**2 / (N-E)
+
+def squared_errors(observed: np.array, expected: np.array):
     """Computes the sum of squared errors between observed values and those 
     which were computed by the model.
 
     Parameters
     ----------
-    p_o : array_like
-        Array of (accumulated) observed probabilities.
-    p_e : array_like
-        Array of (accumulated) expected probabilities (from the model).
+    observed : array_like
+        Array of observed values.
+    expected : array_like
+        Array of expected (model-predicted) values
 
     Returns
     -------
     np.array
-        An array equal to the length of p_o & p_e. This contains the computed 
-        squared error values for all pairs along the curve. Each element is an 
-        estimate of the model fit at the given criterion point. The sum of 
-        these elements is the sum of squared errors.
+        An array, equal to the length of the inputs, containing the computed 
+        squared error values.
     """
-    return (p_o - p_e)**2
+    return (observed - expected)**2
 
-def aic(L: float, k: int):
-    """Computes Akaike's information criterion (AIC; https://en.wikipedia.org/wiki/Akaike_information_criterion).
+# def aic(L: float, k: int):
+#     """Computes Akaike's information criterion (AIC; https://en.wikipedia.org/wiki/Akaike_information_criterion).
     
-    Is an estimator of quality of each model relative to others, enabling model 
-    comparison and selection.
+#     Is an estimator of quality of each model relative to others, enabling model 
+#     comparison and selection.
 
-    Parameters
-    ----------
-    L : float
-        The maximum value of the likelihood function for the model. In the 
-        present context, this is the sum of the negative log of the errors of 
-        a given model, i.e. sum(-ln(sqrt(squared_errors))).
-    k : int
-        The number of estimated parameters in the model.
+#     Parameters
+#     ----------
+#     L : float
+#         The maximum value of the likelihood function for the model. In the 
+#         present context, this is the sum of the negative log of the errors of 
+#         a given model, i.e. sum(-ln(sqrt(squared_errors))).
+#     k : int
+#         The number of estimated parameters in the model.
 
-    Returns
-    -------
-    float
-        The AIC score.
+#     Returns
+#     -------
+#     float
+#         The AIC score.
 
-    """
-    return 2 * k - 2 * np.log(L)
+#     """
+#     return 2 * k - 2 * np.log(L)
 
-def bic(L: float, k: int, n: int):
-    """Computes the Bayesian information criterion (BIC; https://en.wikipedia.org/wiki/Bayesian_information_criterion).
+# def bic(L: float, k: int, n: int):
+#     """Computes the Bayesian information criterion (BIC; https://en.wikipedia.org/wiki/Bayesian_information_criterion).
     
-    Is an estimator of quality of each model relative to others, enabling model 
-    comparison and selection.
+#     Is an estimator of quality of each model relative to others, enabling model 
+#     comparison and selection.
 
-    Parameters
-    ----------
-    L : float
-        The maximum value of the likelihood function for the model. In the 
-        present context, this is the sum of the negative log of the errors of 
-        a given model, i.e. sum(-ln(sqrt(squared_errors))).
-    k : int
-        The number of estimated parameters in the model.
-    n : int
-        The number of data points in the observed data.
+#     Parameters
+#     ----------
+#     L : float
+#         The maximum value of the likelihood function for the model. In the 
+#         present context, this is the sum of the negative log of the errors of 
+#         a given model, i.e. sum(-ln(sqrt(squared_errors))).
+#     k : int
+#         The number of estimated parameters in the model.
+#     n : int
+#         The number of data points in the observed data.
 
-    Returns
-    -------
-    float
-        The BIC score.
+#     Returns
+#     -------
+#     float
+#         The BIC score.
 
-    """
-    return k * np.log(n) - 2 * np.log(L)
-
-
-
+#     """
+#     return k * np.log(n) - 2 * np.log(L)
 
 def auc(x: array_like, y: array_like):
     """The area under the curve. In the context of ROC curves, it is equal to 
