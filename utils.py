@@ -272,53 +272,49 @@ def squared_errors(observed: np.array, expected: np.array):
     """
     return (observed - expected)**2
 
-# def aic(L: float, k: int):
-#     """Computes Akaike's information criterion (AIC; https://en.wikipedia.org/wiki/Akaike_information_criterion).
+def aic(k: int, LL: float=None):
+    """Computes Akaike's information criterion (AIC; https://en.wikipedia.org/wiki/Akaike_information_criterion).
     
-#     Is an estimator of quality of each model relative to others, enabling model 
-#     comparison and selection.
+    Is an estimator of quality of each model relative to others, enabling model 
+    comparison and selection.
 
-#     Parameters
-#     ----------
-#     L : float
-#         The maximum value of the likelihood function for the model. In the 
-#         present context, this is the sum of the negative log of the errors of 
-#         a given model, i.e. sum(-ln(sqrt(squared_errors))).
-#     k : int
-#         The number of estimated parameters in the model.
+    Parameters
+    ----------
+    k : int
+        The number of estimated parameters in the model.
+    LL : float
+        The log-likelihood value (see `log_likelihood`).
 
-#     Returns
-#     -------
-#     float
-#         The AIC score.
+    Returns
+    -------
+    float
+        The AIC score.
 
-#     """
-#     return 2 * k - 2 * np.log(L)
+    """
+    return 2 * k - 2 * LL
 
-# def bic(L: float, k: int, n: int):
-#     """Computes the Bayesian information criterion (BIC; https://en.wikipedia.org/wiki/Bayesian_information_criterion).
+def bic(k: int, n: int, LL: float):
+    """Computes the Bayesian information criterion (BIC; https://en.wikipedia.org/wiki/Bayesian_information_criterion).
     
-#     Is an estimator of quality of each model relative to others, enabling model 
-#     comparison and selection.
+    Is an estimator of quality of each model relative to others, enabling model 
+    comparison and selection.
 
-#     Parameters
-#     ----------
-#     L : float
-#         The maximum value of the likelihood function for the model. In the 
-#         present context, this is the sum of the negative log of the errors of 
-#         a given model, i.e. sum(-ln(sqrt(squared_errors))).
-#     k : int
-#         The number of estimated parameters in the model.
-#     n : int
-#         The number of data points in the observed data.
+    Parameters
+    ----------
+    k : int
+        The number of estimated parameters in the model.
+    n : int
+        The number of data points in the observed data.
+    LL : float
+        The log-likelihood value (see `log_likelihood`).
 
-#     Returns
-#     -------
-#     float
-#         The BIC score.
+    Returns
+    -------
+    float
+        The BIC score.
 
-#     """
-#     return k * np.log(n) - 2 * np.log(L)
+    """
+    return k * np.log(n) - 2 * LL
 
 def auc(x: array_like, y: array_like):
     """The area under the curve. In the context of ROC curves, it is equal to 
