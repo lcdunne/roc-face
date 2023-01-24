@@ -18,13 +18,16 @@ def keyval_table(**kwargs):
     for key, val in kwargs.items():
         if isinstance(val, np.ndarray):
             for i, x in enumerate(val):
-                t.add_row([f"{key} {i}", x])
+                t.add_row([f"{key} {i+1}", x])
         else:
             t.add_row([key, val])
     return t
 
 def accumulate(arr: array_like):
     return np.cumsum(arr)
+
+def deaccumulate(arr: array_like) -> np.ndarray:
+    return np.diff(np.insert(arr, 0, 0)) # insert a 0 at the start
 
 def compute_proportions(
     arr: array_like,
@@ -136,14 +139,36 @@ def plot_roc(
     if chance:
         ax.plot([0,1], [0,1], c='k', lw=1, ls='dashed')
     
-    ax.scatter(noise, signal, **kwargs)
+    ax.scatter(noise, signal, **kwargs, zorder=1e10)
     ax.axis('square')
-    ax.set(xlabel='1 - specificity', ylabel='sensitivity')
+    ax.set(xlabel='FP', ylabel='TP')
     return ax
 
-# de-accumulate
-def deaccumulate(arr: array_like) -> np.ndarray:
-    return np.diff(np.insert(arr, 0, 0)) # insert a 0 at the start
+def plot_zroc(z_signal, z_noise, poly=1, reg=True, data=True, ax=None, **kwargs):
+    print(z_signal, z_noise)
+    if ax is None:
+        fig, ax = plt.subplots()
+    
+    ax.axhline(0, lw=1, ls='dashed', c='k')
+    ax.axvline(0, lw=1, ls='dashed', c='k')
+    
+    if data:
+        ax.scatter(z_noise, z_signal, **kwargs, zorder=1e10)
+    
+    if reg:
+        thetas = np.polyfit(z_noise, z_signal, poly)
+        linex = np.ones(len(z_noise)).reshape(-1, 1)
+
+        # Create polynomial for z(FP)
+        for degree in range(1, poly+1):
+            linex = np.c_[linex, np.power(z_noise, degree)]
+        
+        y_pred = linex @ thetas[::-1]
+        ax.plot(z_noise, y_pred)
+
+    ax.axis('square')
+    ax.set(xlabel='z(FP)', ylabel='z(TP)')
+    return ax
 
 # # Fitting functions
 # def loglik(O: np.array, E: np.array, N: numeric):
