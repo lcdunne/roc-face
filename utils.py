@@ -105,7 +105,7 @@ def plot_roc(
         **kwargs
     ) -> Axes:
     """A utility to plot ROC curves. Requires signal and noise arrays in 
-    probability space. Accept scatter plot keyword arguments.
+    probability space. Accepts scatter plot keyword arguments.
     
     Parameters
     ----------
@@ -126,7 +126,8 @@ def plot_roc(
     Returns
     -------
     ax : Axes
-        A matplotlib Axes object with the plotted signal & noise data.
+        A matplotlib Axes object with the plotted signal & noise data in 
+        probability space.
 
     """
     if ax is None:
@@ -140,7 +141,44 @@ def plot_roc(
     ax.set(xlabel='FP', ylabel='TP')
     return ax
 
-def plot_zroc(signal, noise, poly=1, reg=True, data=True, ax=None, **kwargs):
+def plot_zroc(
+        signal: array_like,
+        noise: array_like,
+        ax: Optional[Axes]=None,
+        reg: Optional[bool]=True,
+        poly: Optional[int]=1,
+        data: Optional[bool]=True,
+        **kwargs
+    ):
+    """A utility to plot z-ROC curves. Requires signal and noise arrays in 
+    probability space. Accepts scatter plot keyword arguments.
+    
+    Parameters
+    ----------
+    signal : array_like
+        Signal array in probability space.
+    noise : array_like
+        Noise array in probability space.
+    ax : Optional[Axes], optional
+        Matplotlib Axes object to plot to, if already defined. The default is 
+        None.
+    reg : Optional[bool], optional
+        Whether or not to draw a regression line. If True, see `poly`. The 
+        default is True.
+    poly : Optional[int], optional
+        The order of the polynomial regression line. The 
+        default is 1 (linear regression).
+    **kwargs : TYPE
+        Keyword arguments for the matplotlib.pyplot.scatter function. See 
+        https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.scatter.html.
+    
+    Returns
+    -------
+    ax : Axes
+        A matplotlib Axes object with the plotted signal & noise data in 
+        z-space.
+
+    """
     z_signal = stats.norm.ppf(signal)
     z_noise = stats.norm.ppf(noise)
     
