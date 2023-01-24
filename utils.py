@@ -95,8 +95,6 @@ def compute_proportions(
 
     return np.array(f)
 
-def euclidean_distance(x: np.array, y: np.array):
-    return np.sqrt(sum((y - x)**2))
 
 def plot_roc(
         signal: array_like,
@@ -167,38 +165,6 @@ def plot_zroc(z_signal, z_noise, poly=1, reg=True, data=True, ax=None, **kwargs)
     ax.set(xlabel='z(FP)', ylabel='z(TP)')
     return ax
 
-# # Fitting functions
-# def loglik(O: np.array, E: np.array, N: numeric):
-#     """Computes the G-test (https://en.wikipedia.org/wiki/G-test).
-#     Note that this function is equivalent to 
-#     `scipy.stats.power_divergence(f_obs, f_exp, ... lambda_='log-likelihood')`.
-
-#     Parameters
-#     ----------
-#     O : array_like
-#         An array of accumulated observed counts.
-#     E : array_like
-#         An array of accumulated expected counts.
-#     N : numeric
-#         The total number of responses for the set. As currently implemented,
-#         O is truncated and will not contain the total N at O[-1], so N must be 
-#         passed explicitly. This may be changed in a future implementation.
-
-#     Returns
-#     -------
-#     np.array
-#         An array equal to the length of O & E. This contains the computed G^2 
-#         values for all pairs of G(Oi, Ei). Each element is an estimate of the 
-#         model fit at the given criterion level i. The sum of these elements is 
-#         the sum of G^2, which can then be further analysed.
-#     """
-#     # TODO: N could be obtained with N = O[-1] if we do not truncate the input.
-#     #   however this would mean len(O) == len(E)+1 which is a little clunky.
-#     with np.errstate(divide='ignore'):
-#         # ignore infinite value warning & return inf anyway.
-#         # alternative return could be just the sum of this.
-#         return 2 * O * np.log(O/E) + 2 * (N - O) * np.log((N - O)/(N - E))
-
 def log_likelihood(f_obs, p_exp):
     """Computes the Log Likelihood 
     
@@ -226,32 +192,6 @@ def log_likelihood(f_obs, p_exp):
     """
     
     return (np.array(f_obs) * np.log(np.array(p_exp))).sum()
-
-# def chitest(O: np.array, E: np.array, N: numeric):
-#     """Computes Pearson's χ^2 test (https://en.wikipedia.org/wiki/Chi-squared_test). 
-#     Note that this function is equivalent to 
-#     `scipy.stats.power_divergence(f_obs, f_exp, ... lambda_='pearson')`.
-
-#     Parameters
-#     ----------
-#     O : array_like
-#         An array of accumulated observed counts.
-#     E : array_like
-#         An array of accumulated expected counts.
-#     N : numeric
-#         The total number of responses for the set. As currently implemented,
-#         O is truncated and will not contain the total N at O[-1], so N must be 
-#         passed explicitly. This may be changed in a future implementation.
-
-#     Returns
-#     -------
-#     np.array
-#         An array equal to the length of O & E. This contains the computed χ^2 
-#         values for all pairs of χ^2(Oi, Ei). Each element is an estimate of the 
-#         model fit at the given criterion level i. The sum of these elements is 
-#         the sum of χ^2, which can then be further analysed.
-#     """
-#     return (O - E)**2 / E + ((N-O) - (N-E))**2 / (N-E)
 
 def squared_errors(observed: np.array, expected: np.array):
     """Computes the sum of squared errors between observed values and those 
