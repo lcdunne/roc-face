@@ -86,7 +86,7 @@ class _BaseModel:
     def __init__(self, signal, noise):
         self.obs_signal = ResponseData(signal)
         self.obs_noise = ResponseData(noise)
-        self.auc = auc(x=self.obs_noise.props, y=self.obs_signal.props)
+        self.auc = auc(self.obs_noise.props_acc, self.obs_signal.props_acc)
         self.convergence = []
         
         # Dummy parameters in case no model is specified. This is the fully saturated model (not intended for use).
