@@ -68,7 +68,7 @@ Once a model has been instantiated, we can view it in ROC space and see the AUC 
 0.7439343243677308
 ```
 
-<img src="https://github.com/lcdunne/signal-detection/raw/main/_simple_ROC.png" alt="" width="620">
+<img src="https://github.com/lcdunne/signal-detection/raw/main/example/_simple_ROC.png" alt="" width="620">
 
 We can fit the two models (`evsd` and `uvsd`) as follows:
 
@@ -134,14 +134,16 @@ G(1) = 77.32906143806828, p = 1.4472085251058265e-18
 Finally, we can just view the ROC data and the two fitted models, as follows:
 
 ```python
->>> fig, ax = plt.subplots(dpi=150)
+>>> from utils import plot_zroc
 
->>> ax.plot(
+>>> fig, ax = plt.subplots(1, 2, dpi=150)
+
+>>> ax[0].plot(
         *evsd.compute_expected(evsd.fitted_parameters['d']),
         label=evsd.label
     )
 
->>> ax.plot(
+>>> ax[0].plot(
         *uvsd.compute_expected(
             uvsd.fitted_parameters['d'],
             uvsd.fitted_parameters['scale']
@@ -150,12 +152,17 @@ Finally, we can just view the ROC data and the two fitted models, as follows:
     )
 
 # Just plots the original datapoints
->>> plot_roc(evsd.obs_signal.roc, evsd.obs_noise.roc, ax=ax, c='k')
+>>> plot_roc(evsd.obs_signal.roc, evsd.obs_noise.roc, ax=ax[0], c='k')
 
->>> ax.legend(loc='lower right')
+# Plot z-ROC with second-order polynomial fit to the second subplot axis
+>>> plot_zroc(evsd.obs_signal.roc, evsd.obs_noise.roc, reg=True, poly=2, ax=ax[1], c='k')
+
+>>> ax[0].legend(loc='lower right')
+
+>>> plt.tight_layout()
 >>> plt.show()
 ```
-<img src="https://github.com/lcdunne/signal-detection/raw/main/_example_evsd-uvsd.png" alt="" width="620">
+<img src="https://github.com/lcdunne/signal-detection/raw/main/example/_example_evsd-uvsd.png" alt="" width="620">
 
 ## Useful links:
 
