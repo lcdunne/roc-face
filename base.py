@@ -157,18 +157,9 @@ class _BaseModel:
         return self._n_named_parameters + self.n_criteria
 
     @property
-    def aic(self):
-        return self._aic
-
-    @property
-    def bic(self):
-        return self._bic
-
-    @property
     def dof(self):
         return len(self.obs_signal.roc) + len(self.obs_noise.roc) - self.n_param
-    
-    # @classmethod ?
+
     def define_model_inputs(self, labels: list, values: list, n_criteria: int=0):
         """Maps from flat list of labels and x0 values to dict accepted by the
         `<model>.compute_expected(...)` function.
@@ -420,23 +411,13 @@ class _BaseModel:
         # TODO: After the above, would be nice to have a method to make all stats
         #   like ._make_results()
         
-        # Errors
-        sse_signal = squared_errors(self.obs_signal.roc, self.exp_signal.roc).sum()
-        sse_noise = squared_errors(self.obs_noise.roc, self.exp_noise.roc).sum()
-        self.sse = sse_signal + sse_noise
-        
-        # Compute the -LL, AIC, and BIC
-        # Shouldn't this be computed on the accumulated freqs?
-        signal_LL = log_likelihood(self.obs_signal.freqs, self.exp_signal.props)
-        noise_LL = log_likelihood(self.obs_noise.freqs, self.exp_noise.props)
-        self.LL = signal_LL + noise_LL
-        self._aic = 2 * self.n_param - 2 * self.LL
-        self._bic = self.n_param * np.log(self.obs_signal.n + self.obs_noise.n) - 2 * self.LL
-        
-        # # Compute the overall euclidean fit
-        # signal_euclidean = euclidean_distance(self.p_signal, self.expected_p_signal)
-        # noise_euclidean = euclidean_distance(self.p_noise, self.expected_p_noise)
-        # self.euclidean_fit = signal_euclidean + noise_euclidean
+        # Fit statistics
+        self.sse = self.sum_of_squared_errors()
+        self.gstat = self.g_statistic(alt)
+        self.chistat = self.chi_squared_statistic(alt)
+        self.loglik = self.log_likelihood(alt)
+        self.aic = 2 * self.n_param - 2 * self.loglik
+        self.bic = self.n_param * np.log(self.obs_signal.n + self.obs_noise.n) - 2 * self.loglik
         
         # TODO: Define nice results output
         self.results = {
@@ -444,11 +425,10 @@ class _BaseModel:
             'fit-success': self.fit_success,
             'fit-method': method,
             'statistic': self.statistic,
-            'log_likelihood': self.LL,
-            'AIC': self._aic,
-            'BIC': self._bic,
+            'log_likelihood': self.loglik,
+            'AIC': self.aic,
+            'BIC': self.bic,
             'SSE': self.sse,
-            # 'euclidean_fit': self.euclidean_fit,
         }
         
         return self.fitted_parameters
