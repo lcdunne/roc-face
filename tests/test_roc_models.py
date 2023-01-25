@@ -10,30 +10,31 @@ def uvsd_model(signal, noise):
 # Test all data against ROC toolbox for fit functionality
 fit_func_contingencies = [
     ('Dunn2011', datasets.get('Dunn2011'), models.SignalDetection, 'G', 82.362),
-    ('Dunn2011', datasets.get('Dunn2011'), models.SignalDetection, 'LL', -8659.73), # bug
-    ('Dunn2011', datasets.get('Dunn2011'), models.SignalDetection, 'CHI2', 82.34),
+    ('Dunn2011', datasets.get('Dunn2011'), models.SignalDetection, 'LL', 8659.73), # bug
+    ('Dunn2011', datasets.get('Dunn2011'), models.SignalDetection, 'X2', 82.34),
     ('Dunn2011', datasets.get('Dunn2011'), models.SignalDetection, 'SSE',0.002211),
     ('Dunn2011', datasets.get('Dunn2011'), uvsd_model, 'G', 3.0349),
-    ('Dunn2011', datasets.get('Dunn2011'), uvsd_model, 'LL', -8620.06), # bug
-    ('Dunn2011', datasets.get('Dunn2011'), uvsd_model, 'CHI2', 3.022),
+    ('Dunn2011', datasets.get('Dunn2011'), uvsd_model, 'LL', 8620.06), # bug
+    ('Dunn2011', datasets.get('Dunn2011'), uvsd_model, 'X2', 3.022),
     ('Dunn2011', datasets.get('Dunn2011'), uvsd_model, 'SSE',0.00011164),
     ('Dunn2011', datasets.get('Dunn2011'), models.DualProcess, 'G', 23.887),
-    ('Dunn2011', datasets.get('Dunn2011'), models.DualProcess, 'LL', -8630.489), # bug
-    ('Dunn2011', datasets.get('Dunn2011'), models.DualProcess, 'CHI2', 23.696),
+    ('Dunn2011', datasets.get('Dunn2011'), models.DualProcess, 'LL', 8630.489), # bug
+    ('Dunn2011', datasets.get('Dunn2011'), models.DualProcess, 'X2', 23.696),
     ('Dunn2011', datasets.get('Dunn2011'), models.DualProcess, 'SSE',0.000495), # is 0.0023 in ROC toolbox
     ('Koen', datasets.get('Koen'), models.SignalDetection, 'G', 35.55),
-    ('Koen', datasets.get('Koen'), models.SignalDetection, 'LL', -2.1558e3), # bug
-    ('Koen', datasets.get('Koen'), models.SignalDetection, 'CHI2', 35.01),
+    ('Koen', datasets.get('Koen'), models.SignalDetection, 'LL', 2.1558e3), # bug
+    ('Koen', datasets.get('Koen'), models.SignalDetection, 'X2', 35.01),
     ('Koen', datasets.get('Koen'), models.SignalDetection, 'SSE',0.0044),
     ('Koen', datasets.get('Koen'), uvsd_model, 'G', 1.7281),
-    ('Koen', datasets.get('Koen'), uvsd_model, 'LL', -2.1389e3), # bug
-    ('Koen', datasets.get('Koen'), uvsd_model, 'CHI2', 1.7489),
+    ('Koen', datasets.get('Koen'), uvsd_model, 'LL', 2.1389e3), # bug
+    ('Koen', datasets.get('Koen'), uvsd_model, 'X2', 1.7489),
     ('Koen', datasets.get('Koen'), uvsd_model, 'SSE',0.00011164),
     ('Koen', datasets.get('Koen'), models.DualProcess, 'G', 8.5786),
-    ('Koen', datasets.get('Koen'), models.DualProcess, 'LL', -2.1423e3), # bug
-    ('Koen', datasets.get('Koen'), models.DualProcess, 'CHI2', 8.6103),
-    ('Koen', datasets.get('Koen'), models.DualProcess, 'SSE',0.0012), # is 0.0012 in ROC toolbox
+    ('Koen', datasets.get('Koen'), models.DualProcess, 'LL', 2.1423e3), # bug
+    ('Koen', datasets.get('Koen'), models.DualProcess, 'X2', 8.6103),
+    ('Koen', datasets.get('Koen'), models.DualProcess, 'SSE', 0.0012), # is 0.0012 in ROC toolbox, but for some reason getting 0.02052593...
 ]
+
 @pytest.mark.parametrize('dataset_name,dataset,model,fitstat,expected', fit_func_contingencies)
 def test_fit_statistics(dataset_name, dataset, model, fitstat, expected):
     # Arrange
@@ -43,7 +44,7 @@ def test_fit_statistics(dataset_name, dataset, model, fitstat, expected):
     # Assert
     fit = m.optimisation_output.fun
     assert m.results['fit-success'] == True, f"{m.label} model fit failed for {dataset_name} dataset..."
-    assert np.allclose(fit, expected, atol=0.01), f"Expected {expected}, but got {fit}..."
+    assert np.allclose(fit, expected, atol=.01), f"Expected {expected}, but got {fit}..."
 
 
 # Test all data against ROC toolbox for fitted parameter estimates
