@@ -267,7 +267,6 @@ if __name__ == '__main__':
     ax.legend(loc='lower right')
     plt.show()
     
-<<<<<<< HEAD
     # Plot convergence for each model
     fig, ax = plt.subplots(2,2, dpi=150)
     for axis, model in zip(ax.flatten(), [ht, evsd, uvsd, dpsd]):
@@ -275,13 +274,3 @@ if __name__ == '__main__':
         axis.set(xlabel='iteration', ylabel=fit_method, title=model.label)    
     plt.tight_layout()
     plt.show()
-=======
-    fig, ax = plt.subplots(1, 3, figsize=(9,4), dpi=100, sharey=True)
-    ax[0].bar(x=np.arange(1,11), height=ht.squared_errors)
-    ax[1].bar(x=np.arange(1,11), height=evsd.squared_errors)
-    ax[2].bar(x=np.arange(1,11), height=uvsd.squared_errors)
-    ax[0].set(ylabel='Log Euclidean Fit', xlabel='criterion', yscale='log', title='High Threshold')
-    ax[1].set(title='Equal Variance', yscale='log', xlabel='criterion',)
-    ax[2].set(title='Unequal Variance', yscale='log', xlabel='criterion',)
-    plt.show()
->>>>>>> cb4678bdd06242228e1891c1e364e976f0819da1
