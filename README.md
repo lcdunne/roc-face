@@ -58,10 +58,11 @@ Once a model has been instantiated, we can view it in ROC space and see the AUC 
 ```python
 # Utility plot function
 # not required - can just use standard matplotlib
+>>> import matplotlib.pyplot as plt
 >>> from utils import plot_roc
 
 # Just plots the original datapoints
->>> plot_roc(evsd.p_signal, evsd.p_noise, c='k')
+>>> plot_roc(evsd.obs_signal.roc, evsd.obs_noise.roc, c='k'); plt.show()
 
 >>> print(evsd.auc)
 0.7439343243677308
@@ -75,62 +76,64 @@ We can fit the two models (`evsd` and `uvsd`) as follows:
 # Fit the models using the G^2 fit function
 >>> evsd.fit()
 {
-    'd': 1.0201477503320475,
-    'criteria': array([ 0.94589746,  0.47680517,  0.01204214, -0.56213821, -1.28720453])
+    'd': 1.020144525302289,
+    'criteria': array([ 0.94589698,  0.47680529,  0.01204417, -0.56213984, -1.28720496])
 }
 
 >>> uvsd.fit()
 {
-    'd': 1.192497247996845,
-    'scale': 1.3447964928242155,
-    'criteria': array([ 1.03065819,  0.45976337, -0.06872705, -0.70004942, -1.46072412])
+    'd': 1.1924959229611845,
+    'scale': 1.3447947556571425,
+    'criteria': array([ 1.03065803,  0.45976385, -0.06872691, -0.70004907, -1.46072399])
 }
 
 # Check the results
 >>> print(evsd.results)
 {
     'model': 'Equal Variance Signal Detection',
-    'opt-success': True,
-    'log-likelihood': 81.23108620009691,
-    'aic': -64.79662553538728,
-    'bic': -27.897282268972745,
-    'euclidean_fit': 0.10630270614413172
+    'fit-success': True,
+    'fit-method': 'G',
+    'statistic': 81.23108616253239,
+    'log_likelihood': -8721.468296830686,
+    'AIC': 17454.936593661372,
+    'BIC': 17491.835936927786,
+    'SSE': 0.0062687683639536295
 }
 
 >>> print(uvsd.results)
 {
-    'model': 'Unequal Variance Signal Detection',
-    'opt-success': True,
-    'log-likelihood': 3.902024727392697,
-    'aic': -98.43321886926276,
-    'bic': -55.3839850584458,
-    'euclidean_fit': 0.02829386287310158
+    'model': 'Unequal Variance Signal Detection',
+    'fit-success': True,
+    'fit-method': 'G',
+    'statistic': 3.9020247244641175,
+    'log_likelihood': -8682.803766111652,
+    'AIC': 17379.607532223305,
+    'BIC': 17422.65676603412,
+    'SSE': 0.0009699101952450413
 }
 ```
 
-They can also be compared statistically, since the $G^2$ statistic is approximately $\chi^2$ distributed. To accomplish this, we just need to (1) compute the *difference* in $G^2$ and (2) compute the *difference* in the degrees of freedom between the two models. These values can then be used to obtain a $p$ value:
+They can also be compared statistically, since the $G^2$ statistic is approximately $\chi^2$ distributed. To accomplish this, we just need to (1) compute the *difference* in $G^2$ and (2) compute the *difference* in the degrees of freedom between the two models. This is possible using either the G-test or the $χ^2$ test statistics. These values can then be used to obtain a $p$ value:
 
 ```python
 >>> from scipy import stats
 
-# Get the difference in G^2 values
->>> g2diff = evsd.results['log-likelihood'] - uvsd.results['log-likelihood']
+# Get the difference in G-test values
+>>> gdiff = evsd.results['statistic'] - uvsd.results['statistic']
 
 # Get the difference in the degrees of freedom for each model
->>> ddofdiff = evsd.ddof - uvsd.ddof
+>>> dofdiff = evsd.dof - uvsd.dof
 
 # Get a p value
->>> p = stats.chi2.sf(x=g2diff, df=ddofdiff)
+>>> p = stats.chi2.sf(x=gdiff, df=dofdiff)
 
->>> print(f"G^2 ({ddofdiff}) = {g2diff}, p = {p}")
-G^2 (1) = 77.32906147270421, p = 1.4472084997268971e-18
+>>> print(f"G({dofdiff}) = {gdiff}, p = {p}")
+G(1) = 77.32906143806828, p = 1.4472085251058265e-18
 ```
 
 Finally, we can just view the ROC data and the two fitted models, as follows:
 
 ```python
->>> import matplotlib.pyplot as plt
-
 >>> fig, ax = plt.subplots(dpi=150)
 
 >>> ax.plot(
@@ -147,7 +150,7 @@ Finally, we can just view the ROC data and the two fitted models, as follows:
     )
 
 # Just plots the original datapoints
->>> plot_roc(evsd.p_signal, evsd.p_noise, ax=ax, c='k', zorder=999)
+>>> plot_roc(evsd.obs_signal.roc, evsd.obs_noise.roc, ax=ax, c='k')
 
 >>> ax.legend(loc='lower right')
 >>> plt.show()
