@@ -224,6 +224,51 @@ class _BaseModel:
         """
         return self.obs_noise.roc.copy(), self.obs_signal.roc.copy()
 
+    def _arrange_fit_inputs(self, alt=True):
+        """Convenience function to arrange observed & expected signal & noise 
+        inputs.
+
+        Parameters
+        ----------
+        alt : bool, optional
+            Whether or not to use the alternative input approach. If `True`, 
+            each input is a 2d array of cumulative inclusion (O, E; first 
+            dimension) and exclusion (N-O, N-E; second dimension) frequencies.
+            This method yields similar fits to the standard approach, but also 
+            provides better fits for the high threshold model. If `False`, then
+            the inputs are simply the observed and expected frequencies forced 
+            to be non-zero (1e-100) to support calculation of goodness of fit 
+            statistics. The default is True.
+
+        Returns
+        -------
+        observed_signal : array_like
+            DESCRIPTION.
+        observed_noise : array_like
+            DESCRIPTION.
+        expected_signal : array_like
+            DESCRIPTION.
+        expected_noise : array_like
+            DESCRIPTION.
+
+        """
+        if alt:
+            observed_signal = np.array([self.obs_signal.freqs_acc[:-1], self.obs_signal.n - self.obs_signal.freqs_acc[:-1]])
+            observed_noise = np.array([self.obs_noise.freqs_acc[:-1], self.obs_noise.n - self.obs_noise.freqs_acc[:-1]])
+            expected_signal = np.array([self.exp_signal.freqs_acc[:-1], self.obs_signal.n - self.exp_signal.freqs_acc[:-1]])
+            expected_noise = np.array([self.exp_noise.freqs_acc[:-1], self.obs_noise.n - self.exp_noise.freqs_acc[:-1]])
+        else:
+            observed_signal = self.obs_signal.freqs
+            observed_noise = self.obs_noise.freqs
+            # Correct expected freqs. of 0 to prevent division errors
+            expected_signal = np.where(self.exp_signal.freqs == 0, 1e-100, self.exp_signal.freqs)
+            expected_noise = np.where(self.exp_noise.freqs == 0, 1e-100, self.exp_noise.freqs)
+        return {
+            'observed_signal': observed_signal,
+            'observed_noise': observed_noise,
+            'expected_signal': expected_signal,
+            'expected_noise': expected_noise
+        }
 
     def _objective(self, x0: array_like, method: Optional[str]='G', alt: Optional[bool]=True) -> float:
         """The objective function to minimise. Not intended to be manually 
@@ -248,7 +293,7 @@ class _BaseModel:
             are passed to the theoretical model being fitted, and the value of 
             the objective function is then calculated.
         method : str, optional
-            See the .fit method for details. The default is 'log-likelihood'.
+            See the .fit method for details. The default is 'G'.
         alt : bool, optional
             Use alternative inputs to goodness-of-fit function. If False, the 
             inputs are simply the observed and expected non-cumulative 
@@ -281,48 +326,45 @@ class _BaseModel:
         # Compute the expected probabilities using the model function
         expected_p_noise, expected_p_signal = self.compute_expected(**model_input)
         self.exp_signal = ResponseData(props_acc=expected_p_signal, n=self.obs_signal.n)
-        self.exp_noise = ResponseData(props_acc=expected_p_noise, n=self.obs_noise.n)
-        
-        # Prepare the inputs for goodness-of-fit testing
-        if alt:
-            observed_signal = np.array([self.obs_signal.freqs_acc[:-1], self.obs_signal.n - self.obs_signal.freqs_acc[:-1]])
-            observed_noise = np.array([self.obs_noise.freqs_acc[:-1], self.obs_noise.n - self.obs_noise.freqs_acc[:-1]])
-            expected_signal = np.array([self.exp_signal.freqs_acc[:-1], self.obs_signal.n - self.exp_signal.freqs_acc[:-1]])
-            expected_noise = np.array([self.exp_noise.freqs_acc[:-1], self.obs_noise.n - self.exp_noise.freqs_acc[:-1]])
-        else:
-            observed_signal = self.obs_signal.freqs
-            observed_noise = self.obs_noise.freqs
-            # Correct expected freqs. of 0 to prevent division errors
-            expected_signal = np.where(self.exp_signal.freqs == 0, 1e-100, self.exp_signal.freqs)
-            expected_noise = np.where(self.exp_noise.freqs == 0, 1e-100, self.exp_noise.freqs)
+        self.exp_noise = ResponseData(props_acc=expected_p_noise, n=self.obs_noise.n)    
             
         # Compute the goodness-of-fit
         if method.upper() == 'SSE':
-            # The ROC toolbox uses: (.obs_*.props - .exp_*.props)**2
-            # The DPSDSSE spreadsheed uses: (.obs_*.roc - .exp_*.roc)**2
-            sse_signal = squared_errors(observed_signal, expected_signal).sum()
-            sse_noise = squared_errors(observed_noise, expected_noise).sum()
-            SSE = sse_signal + sse_noise
-            self.convergence.append(SSE)
-            return SSE
-        
-        elif method.upper() in ['G', 'X2', 'CHI2', 'CHI']:     
-            lambda_ = int(method.upper() != 'G') # if true, then converted to 1, else 0
-            gof_signal = stats.power_divergence(observed_signal, expected_signal, lambda_=lambda_)            
-            gof_noise = stats.power_divergence(observed_noise, expected_noise, lambda_=lambda_)
-            gof = np.sum(gof_signal.statistic) + np.sum(gof_noise.statistic)
-            self.convergence.append(gof)
-            return gof
-        elif method.upper() in ['LL', '-LL', 'loglik','log-likelihood']:
-            # LL and -LL are interpreted the same (minimization must occur on the -LL)
-            # 'log-likelihood', when used as `lambda_` in the `power_divergence` test actually refers to the g-test.
-            ll_signal = log_likelihood(observed_signal, expected_signal)
-            ll_noise = log_likelihood(observed_noise, expected_noise)
-            LL = ll_signal + ll_noise
-            self.convergence.append(LL)
-            return -LL
+            fit_value = self.sum_of_squared_errors()
+        elif method.upper() == 'G':     
+            fit_value = self.g_statistic(alt)
+        elif method.upper() == 'X2':     
+            fit_value = self.chi_squared_statistic(alt)
+        elif method.upper() == 'LL':
+            fit_value = -self.log_likelihood(alt) # Flip the sign for minimisation
         else:
-            raise ValueError(f"Method must be one of SSE, X2, or G, but got {method}.")
+            raise ValueError(f"Method must be one of SSE, G, X2, or LL, but got {method}.")
+        self.convergence.append(fit_value)
+        return fit_value
+    
+    def sum_of_squared_errors(self):
+        # SSE is 
+        sse_signal = squared_errors(self.obs_signal.props, self.exp_signal.props).sum()
+        sse_noise = squared_errors(self.obs_noise.props, self.exp_noise.props).sum()
+        return sse_signal + sse_noise
+    
+    def g_statistic(self, alt=True):
+        inputs = self._arrange_fit_inputs(alt=alt)
+        g_signal = stats.power_divergence(inputs['observed_signal'], inputs['expected_signal'], lambda_='log-likelihood')
+        g_noise = stats.power_divergence(inputs['observed_noise'], inputs['expected_noise'], lambda_='log-likelihood')    
+        return np.sum(g_signal.statistic) + np.sum(g_noise.statistic)
+    
+    def chi_squared_statistic(self, alt=True):
+        inputs = self._arrange_fit_inputs(alt=alt)
+        chi_signal = stats.power_divergence(inputs['observed_signal'], inputs['expected_signal'], lambda_='pearson')
+        chi_noise = stats.power_divergence(inputs['observed_noise'], inputs['expected_noise'], lambda_='pearson')    
+        return np.sum(chi_signal.statistic) + np.sum(chi_noise.statistic)
+    
+    def log_likelihood(self, alt=True):
+        inputs = self._arrange_fit_inputs(alt=alt)
+        ll_signal = log_likelihood(inputs['observed_signal'], inputs['expected_signal'] / self.obs_signal.n)
+        ll_noise = log_likelihood(inputs['observed_noise'], inputs['expected_noise'] / self.obs_noise.n)
+        return ll_signal + ll_noise
 
     def fit(self, method: Optional[str]='G', alt: Optional[bool]=True):
         """Fits the theoretical model to the observed data.
