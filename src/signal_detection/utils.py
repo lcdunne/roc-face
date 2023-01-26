@@ -32,8 +32,8 @@ def deaccumulate(arr: array_like) -> np.ndarray:
 
 def compute_proportions(
     arr: array_like,
-    corrected: Optional[bool]=True,
-    truncate: Optional[bool]=True
+    corrected: bool=True,
+    truncate: bool=True
     ) -> np.ndarray:
     """Compute the proportions of a response array.
     
@@ -101,7 +101,7 @@ def plot_roc(
         signal: array_like,
         noise: array_like,
         ax: Optional[Axes]=None,
-        chance: Optional[bool]=True,
+        chance: bool=True,
         **kwargs
     ) -> Axes:
     """A utility to plot ROC curves. Requires signal and noise arrays in 
@@ -116,7 +116,7 @@ def plot_roc(
     ax : Optional[Axes], optional
         Matplotlib Axes object to plot to, if already defined. The default is 
         None.
-    chance : Optional[bool], optional
+    chance : bool, optional
         Whether or not to plot the diagonal chance line (0, 0), (1, 1). The 
         default is True.
     **kwargs : TYPE
@@ -174,7 +174,7 @@ def regress(x: array_like, y: array_like, poly: int=1) -> tuple:
     
     return coefs, y_pred
 
-def linear_equation(coefs, precision=2):
+def linear_equation(coefs: Union[float, array_like], precision: int=2):
     """Generate a string representation of a polynomial regression equation.
 
     Parameters
@@ -199,6 +199,9 @@ def linear_equation(coefs, precision=2):
     equation : str
         The string representation of an equation.
     """
+    if isinstance(coefs, float):
+        coefs = [coefs]
+    
     intercept = np.round(coefs[-1], precision)
 
     equation = f'y = {intercept} + '
@@ -220,8 +223,8 @@ def plot_zroc(
         data: bool=True,
         show_equation: bool=True,
         ax: Optional[Axes]=None,
-        data_kwargs: Optional[dict]=None,
-        line_kwargs: Optional[dict]=None
+        data_kwargs: dict={},
+        line_kwargs: dict={}
 
     ):
     """A utility to plot z-ROC curves. Requires signal and noise arrays in 
@@ -236,7 +239,7 @@ def plot_zroc(
     ax : Optional[Axes], optional
         Matplotlib Axes object to plot to, if already defined. The default is 
         None.
-    reg : Optional[bool], optional
+    reg : bool, optional
         Whether or not to draw a regression line. If True, see `poly`. The 
         default is True.
     poly : Optional[int], optional
@@ -244,9 +247,12 @@ def plot_zroc(
         default is 1 (linear regression).
     show_equation : bool, optional
         Whether to show the equation as the label of the line (if plotted).
-    **kwargs : TYPE
+    data_kwargs : dict, optional
         Keyword arguments for the matplotlib.pyplot.scatter function. See 
         https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.scatter.html.
+    line_kwargs : dict, optional
+        Keyword arguments for the matplotlib.pyplot.plot function. See 
+        https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.plot.html.
     
     Returns
     -------
@@ -265,11 +271,9 @@ def plot_zroc(
     ax.axvline(0, lw=1, ls='dashed', c='k')
     
     if data:
-        data_kwargs = data_kwargs or {}
         ax.scatter(z_noise, z_signal, zorder=1e10, **data_kwargs)
 
     if reg:
-        line_kwargs = line_kwargs or {}
         coefs, y_pred = regress(x=z_noise, y=z_signal, poly=poly)
         
         if show_equation and 'label' not in line_kwargs:
@@ -281,7 +285,7 @@ def plot_zroc(
     ax.set(xlabel='z(FP)', ylabel='z(TP)')
     return ax
 
-def log_likelihood(f_obs, p_exp):
+def log_likelihood(f_obs: Union[float, array_like], p_exp: Union[float, array_like]) -> float:
     """Computes the Log Likelihood 
     
     This is the log likelihood function that appears on page 145 of Dunn (2011) 
@@ -309,7 +313,7 @@ def log_likelihood(f_obs, p_exp):
     
     return (np.array(f_obs) * np.log(np.array(p_exp))).sum()
 
-def squared_errors(observed: np.array, expected: np.array):
+def squared_errors(observed: np.array, expected: np.array) -> float:
     """Computes the sum of squared errors between observed values and those 
     which were computed by the model.
 
@@ -328,7 +332,7 @@ def squared_errors(observed: np.array, expected: np.array):
     """
     return (observed - expected)**2
 
-def aic(k: int, LL: float=None):
+def aic(k: int, LL: float=None) -> float:
     """Computes Akaike's information criterion (AIC; https://en.wikipedia.org/wiki/Akaike_information_criterion).
     
     Is an estimator of quality of each model relative to others, enabling model 
@@ -349,7 +353,7 @@ def aic(k: int, LL: float=None):
     """
     return 2 * k - 2 * LL
 
-def bic(k: int, n: int, LL: float):
+def bic(k: int, n: int, LL: float) -> float:
     """Computes the Bayesian information criterion (BIC; https://en.wikipedia.org/wiki/Bayesian_information_criterion).
     
     Is an estimator of quality of each model relative to others, enabling model 
@@ -372,7 +376,7 @@ def bic(k: int, n: int, LL: float):
     """
     return k * np.log(n) - 2 * LL
 
-def auc(x: array_like, y: array_like):
+def auc(x: array_like, y: array_like) -> float:
     """The area under the curve. In the context of ROC curves, it is equal to 
     the probability that the classifier will be able to discriminate signal 
     from noise.
