@@ -185,6 +185,11 @@ def beta_doubleprime(tpr, fpr, donaldson=False):
         denominator = (tpr * fnr) + (fpr * tnr)
         return np.sign(tpr - fpr) * numerator / denominator
 
+def a_z(z_intercept, z_slope):
+    # See Stanislaw & Todorov (1999). Useful for checking the d` assumption of
+    # equal variances: slope should = 1 (or log(slope) == 0).
+    return norm.cdf( z_intercept / np.sqrt( 1 + z_slope**2 ) )
+
 if __name__ == '__main__':
     print(d_prime(.75, .21))
     print(c_bias(.75, .21))

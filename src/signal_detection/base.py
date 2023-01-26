@@ -112,6 +112,7 @@ class _BaseModel:
         if not hasattr(self, '_n_named_parameters'):
             self._n_named_parameters = len(self._named_parameters)
         
+        (self.z_slope, self.z_intercept), _ = regress( self.obs_signal.z, self.obs_noise.z, poly=1 )
         self._compute_performance()
 
     def _compute_performance(self):
@@ -124,6 +125,7 @@ class _BaseModel:
             # 'aprime': measures.a_prime(tpr, fpr), # TODO: vectorise to avoid ValueError
             'cbias': measures.c_bias(tpr, fpr),
             'beta': measures.beta(tpr, fpr),
+            'Az': measures.a_z(self.z_intercept, self.z_slope),
             'AUC': auc(self.obs_noise.props_acc, self.obs_signal.props_acc)
         }
     
