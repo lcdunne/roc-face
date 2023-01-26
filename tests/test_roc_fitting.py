@@ -54,11 +54,9 @@ def test_fitted_parameters(dataset_name, dataset, model, fitstat, expected_fitst
     m = model(dataset['signal'], dataset['noise'])
     m.fit(fitstat, alt=False)
 
-    # Assert model fitted parameters match
-    fitted_parameters = m.fitted_named_parameters
-    for param, parameter_value in fitted_parameters.items():
-        expected = expected_fitted_params[param]
-        assert np.allclose(parameter_value, expected, rtol=.01), f"Expected {param}={expected} but got {param}={parameter_value}."
+    for param, expected in expected_fitted_params.items():
+        observed_value = m.parameter_estimates[param]
+        assert np.allclose(observed_value, expected, rtol=.01), f"Expected {param}={expected} but got {param}={observed_value}."
 
 
 def test_alt_true_better_for_high_threshold():

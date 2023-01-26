@@ -87,7 +87,6 @@ class _BaseModel:
         self.obs_signal = ResponseData(signal)
         self.obs_noise = ResponseData(noise)
         self.auc = auc(self.obs_noise.props_acc, self.obs_signal.props_acc)
-        self.convergence = []
         
         # Dummy parameters in case no model is specified. This is the fully saturated model (not intended for use).
         if not self._named_parameters:
@@ -122,15 +121,10 @@ class _BaseModel:
         return {k: v['initial'] for k, v in self._parameters.items()}
     
     @property
-    def fitted_parameters(self):
+    def parameter_estimates(self):
         """dict: All parameters and values after fitting."""
         # TODO: Prevent error when calling this before fitting.
-        return self._fitted_parameters
-
-    @property
-    def fitted_named_parameters(self):
-        """dict: Named parameters and values after fitting."""
-        return {k: self.fitted_parameters[k] for k in self._named_parameters.keys()}
+        return self._parameter_estimates
     
     @property
     def parameter_labels(self):
@@ -330,7 +324,9 @@ class _BaseModel:
             fit_value = -self.log_likelihood(alt) # Flip the sign for minimisation
         else:
             raise ValueError(f"Method must be one of SSE, G, X2, or LL, but got {method}.")
-        self.convergence.append(fit_value)
+        if hasattr(self, 'convergence'):
+            # Avoid errors if testing outside of the call to .fit()
+            self.convergence.append(fit_value)
         return fit_value
     
     def sum_of_squared_errors(self):
@@ -382,6 +378,7 @@ class _BaseModel:
 
         """
         self.fit_method = method
+        self.convergence = []
         
         # Run the fit function
         self.optimisation_output = minimize(
@@ -402,7 +399,7 @@ class _BaseModel:
             print(f"Fit failed for {self.__modelname__} model.")
 
         # Define the model inputs as kwargs for the model's `compute_expected` method        
-        self._fitted_parameters = self.define_model_inputs(
+        self._parameter_estimates = self.define_model_inputs(
             labels=self.parameter_labels,
             values=self.fitted_values,
             n_criteria=self.n_criteria
@@ -431,7 +428,7 @@ class _BaseModel:
             'SSE': self.sse,
         }
         
-        return self.fitted_parameters
+        return self.parameter_estimates
 
 if __name__ == '__main__':
     signal = [505,248,226,172,144,93]
