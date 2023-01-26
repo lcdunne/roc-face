@@ -156,32 +156,73 @@ def regress(x: array_like, y: array_like, poly: int=1) -> tuple:
 
     Returns
     -------
-    thetas : array_like
+    coefs : array_like
         Parameters of the regression, obtained using numpy.polyfit (see the 
         NumPy docs), in descending order from highest degree to lowest, with 
-        element `thetas[-1]` being the intercept of the line.
+        element `coefs[-1]` being the intercept of the line.
     y_pred : array_like
         The predictions for y given the parameters.
 
     """
-    thetas = np.polyfit(x, y, poly)
-    linex = np.ones(len(x)).reshape(-1, 1)
+    coefs = np.polyfit(x, y, poly)
+    x_ = np.ones(len(x)).reshape(-1, 1)
     
     for degree in range(1, poly+1):
-        linex = np.c_[linex, np.power(x, degree)]
+        x_ = np.c_[x_, np.power(x, degree)]
     
-    y_pred = linex @ thetas[::-1]
+    y_pred = x_ @ coefs[::-1]
     
-    return thetas, y_pred
+    return coefs, y_pred
+
+def linear_equation(coefs, precision=2):
+    """Generate a string representation of a polynomial regression equation.
+
+    Parameters
+    ----------
+    coefs : array_like
+        An array of regression coefficients, highest power first (see the docs 
+        for `numpy.polyfit` return values).
+    
+    Examples
+    --------
+    >>> linear_equation([.69])       
+    'y = 0.69'
+
+    >>> linear_equation([.42, .69])                         
+    'y = 0.69 + 0.42x'
+
+    >>> linear_equation([1.4195, -0.89324, .42013, .69069], precision=4) 
+    'y = 0.6907 + 0.4201x - 0.8932x^2 + 1.4195x^3'
+
+    Returns
+    -------
+    equation : str
+        The string representation of an equation.
+    """
+    intercept = np.round(coefs[-1], precision)
+
+    equation = f'y = {intercept} + '
+
+    if len(coefs) == 1:
+        return equation.replace(' + ', '')
+    coefs = coefs[:-1][::-1]  
+    
+    equation += ' + '.join([f'{np.round(coef, precision)}x^{i+1}' for i, coef in enumerate(coefs)])
+    equation = equation.replace('+ -', '- ')
+    equation = equation.replace('^1', '')
+    return equation
 
 def plot_zroc(
         signal: array_like,
         noise: array_like,
+        reg: bool=True,
+        poly: int=1,
+        data: bool=True,
+        show_equation: bool=True,
         ax: Optional[Axes]=None,
-        reg: Optional[bool]=True,
-        poly: Optional[int]=1,
-        data: Optional[bool]=True,
-        **kwargs
+        data_kwargs: Optional[dict]=None,
+        line_kwargs: Optional[dict]=None
+
     ):
     """A utility to plot z-ROC curves. Requires signal and noise arrays in 
     probability space. Accepts scatter plot keyword arguments.
@@ -201,6 +242,8 @@ def plot_zroc(
     poly : Optional[int], optional
         The order of the polynomial regression line. The 
         default is 1 (linear regression).
+    show_equation : bool, optional
+        Whether to show the equation as the label of the line (if plotted).
     **kwargs : TYPE
         Keyword arguments for the matplotlib.pyplot.scatter function. See 
         https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.scatter.html.
@@ -222,11 +265,17 @@ def plot_zroc(
     ax.axvline(0, lw=1, ls='dashed', c='k')
     
     if data:
-        ax.scatter(z_noise, z_signal, **kwargs, zorder=1e10)
+        data_kwargs = data_kwargs or {}
+        ax.scatter(z_noise, z_signal, zorder=1e10, **data_kwargs)
 
     if reg:
-        _, y_pred = regress(x=z_noise, y=z_signal, poly=poly)
-        ax.plot(z_noise, y_pred)
+        line_kwargs = line_kwargs or {}
+        coefs, y_pred = regress(x=z_noise, y=z_signal, poly=poly)
+        
+        if show_equation and 'label' not in line_kwargs:
+            # Only show the equation if requested and if label not already provided.
+            line_kwargs['label'] = "$" + linear_equation(coefs) + "$"
+        ax.plot(z_noise, y_pred, **line_kwargs)
 
     ax.axis('square')
     ax.set(xlabel='z(FP)', ylabel='z(TP)')
