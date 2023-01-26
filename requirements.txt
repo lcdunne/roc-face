@@ -1,4 +1,5 @@
-numpy
-scipy
 matplotlib
 mypy
+numpy
+pytest
+scipy

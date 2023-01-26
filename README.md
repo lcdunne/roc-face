@@ -1,6 +1,6 @@
 # Signal Detection
 
-Compute basic signal detection measures & fit theoretical models to data. Measures include $d^\prime$ and $c$ (and others; see example 1). Supported models are high-threshold, equal- and unqeual-variance signal detection, and dual-process signal detection (example 2 shows the equal- and unequal-variance models).
+Compute basic signal detection measures & fit theoretical recognition memory models to data. Measures include $d^\prime$ and $c$ (and others; see example 1). Supported models are high-threshold, equal- and unqeual-variance signal detection, and dual-process signal detection (example 2 shows the equal- and unequal-variance models).
 
 ## Setting Up
 
