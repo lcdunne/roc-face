@@ -1,9 +1,10 @@
 import numpy as np
 from scipy.stats import norm
+from typing import Union
 zscore = norm.ppf
 
 
-def d_prime(tpr, fpr):
+def d_prime(tpr: Union[float, np.ndarray], fpr: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
     """Sensitivity measure d\`, element-wise.
 
     Parameters
@@ -34,7 +35,7 @@ def d_prime(tpr, fpr):
     return zscore(tpr) - zscore(fpr)
 
 
-def c_bias(tpr: float, fpr: float) -> float:
+def c_bias(tpr: Union[float, np.ndarray], fpr: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
     """Bias measure `c`.
 
     Parameters
@@ -69,7 +70,7 @@ def c_bias(tpr: float, fpr: float) -> float:
     return 1 / 2 * -(zscore(tpr) + zscore(fpr))
 
 
-def a_prime(tpr, fpr):
+def a_prime(tpr: float, fpr:float) -> float:
     """The sensitivity index `A\``.
 
     Parameters
@@ -96,6 +97,7 @@ def a_prime(tpr, fpr):
     see Snograss & Corwin (1988). Note that `d\`` is  preferred.
     """
     if tpr >= fpr:
+        # TODO: this comparison leads to an error when inputs are arrays - needs fix.
         numerator = ((tpr - fpr) * (1 + tpr - fpr))
         denominator = 4 * tpr * (1 - fpr)
         return 0.5 + (numerator / denominator)
@@ -105,7 +107,7 @@ def a_prime(tpr, fpr):
         return 0.5 - (numerator / denominator)
 
 
-def beta(tpr, fpr):
+def beta(tpr: Union[float, np.ndarray], fpr: Union[float, np.ndarray]):
     """The bias measure, β.
 
     Parameters
@@ -141,7 +143,7 @@ def beta(tpr, fpr):
     return np.exp( (zscore(fpr)**2 -  zscore(tpr)**2) / 2 )
 
 
-def beta_doubleprime(tpr, fpr, donaldson=False):
+def beta_doubleprime(tpr: Union[float, np.ndarray], fpr: Union[float, np.ndarray], donaldson: bool=False) -> Union[float, np.ndarray]:
     """The bias index `β\`\``.
 
     Parameters
@@ -158,7 +160,7 @@ def beta_doubleprime(tpr, fpr, donaldson=False):
 
     Returns
     -------
-    ndarray
+    float, np.ndarray
         β\`\`. An array of the same length as tpr, fpr, containing the β\`\`
         values. If `tpr` and `fpr` are single floats then a single float
         corresponding to β\`\` is returned.
@@ -185,7 +187,7 @@ def beta_doubleprime(tpr, fpr, donaldson=False):
         denominator = (tpr * fnr) + (fpr * tnr)
         return np.sign(tpr - fpr) * numerator / denominator
 
-def a_z(z_intercept, z_slope):
+def a_z(z_intercept: float, z_slope: float) -> float:
     # See Stanislaw & Todorov (1999). Useful for checking the d` assumption of
     # equal variances: slope should = 1 (or log(slope) == 0).
     return norm.cdf( z_intercept / np.sqrt( 1 + z_slope**2 ) )
