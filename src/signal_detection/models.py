@@ -250,7 +250,7 @@ if __name__ == '__main__':
     print(evsd.results)
     
     uvsd = SignalDetection(signal, noise, equal_variance=False)
-    uvsd.fit(fit_method, alt=alt)
+    uvsd.fit(fit_method, alt=alt, verbose=True)
     print(uvsd.results)
 
     dpsd = DualProcess(signal, noise)
@@ -260,10 +260,10 @@ if __name__ == '__main__':
     # Plot ROC curves
     fig, ax = plt.subplots(dpi=150)
     plot_roc(evsd.obs_signal.roc, evsd.obs_noise.roc, ax=ax)
-    ax.plot(*ht.compute_expected(**ht.fitted_parameters), label=ht.label)
-    ax.plot(*evsd.compute_expected(**evsd.fitted_parameters), label=evsd.label)
-    ax.plot(*uvsd.compute_expected(**uvsd.fitted_parameters), label=uvsd.label)
-    ax.plot(*dpsd.compute_expected(**dpsd.fitted_parameters), label=dpsd.label)
+    ax.plot(*ht.curve, label=ht.label)
+    ax.plot(*evsd.curve, label=evsd.label)
+    ax.plot(*uvsd.curve, label=uvsd.label)
+    ax.plot(*dpsd.curve, label=dpsd.label)
     ax.legend(loc='lower right')
     plt.show()
     
