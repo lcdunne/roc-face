@@ -112,7 +112,7 @@ class _BaseModel:
         if not hasattr(self, '_n_named_parameters'):
             self._n_named_parameters = len(self._named_parameters)
         
-        (self.z_slope, self.z_intercept), _ = regress( self.obs_signal.z, self.obs_noise.z, poly=1 )
+        (self.z_slope, self.z_intercept), _ = regress( self.obs_noise.z, self.obs_signal.z, poly=1 )
         self._compute_performance()
 
     def _compute_performance(self):
