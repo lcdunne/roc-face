@@ -5,7 +5,12 @@ from . import measures
 from .utils import *
 
 class ResponseData:
-    def __init__(self, freqs=None, props_acc=None, n=None, corrected=True):
+    def __init__(
+        self, freqs: Optional[array_like]=None,
+        props_acc: Optional[array_like]=None,
+        n: int=None,
+        corrected: bool=True
+    ):
         if freqs is not None:
             # Create derivatives based on the observed frequencies
             self.freqs = np.array(freqs)
@@ -84,7 +89,7 @@ class _BaseModel:
     _has_criteria = False
     _named_parameters = {}
 
-    def __init__(self, signal, noise):
+    def __init__(self, signal: array_like, noise: array_like):
         self.obs_signal = ResponseData(signal)
         self.obs_noise = ResponseData(noise)
         
@@ -231,7 +236,7 @@ class _BaseModel:
         """
         return self.obs_noise.roc.copy(), self.obs_signal.roc.copy()
 
-    def _arrange_fit_inputs(self, alt=True):
+    def _arrange_fit_inputs(self, alt: bool=True):
         """Convenience function to arrange observed & expected signal & noise 
         inputs.
 
@@ -249,14 +254,10 @@ class _BaseModel:
 
         Returns
         -------
-        observed_signal : array_like
-            DESCRIPTION.
-        observed_noise : array_like
-            DESCRIPTION.
-        expected_signal : array_like
-            DESCRIPTION.
-        expected_noise : array_like
-            DESCRIPTION.
+        dict
+            A dict containiner the arranged observed and expected signal and 
+            noise data in a form that is prepared for passing into one of the 
+            chosen fitting functions (G, χ^2, log-likelihood, or SSE).
 
         """
         if alt:
@@ -277,7 +278,7 @@ class _BaseModel:
             'expected_noise': expected_noise
         }
 
-    def _objective(self, x0: array_like, method: Optional[str]='G', alt: Optional[bool]=True) -> float:
+    def _objective(self, x0: array_like, method: str='G', alt: bool=True) -> float:
         """The objective function to minimise. Not intended to be manually 
         called.
         
@@ -357,25 +358,25 @@ class _BaseModel:
         sse_noise = squared_errors(self.obs_noise.props, self.exp_noise.props).sum()
         return sse_signal + sse_noise
     
-    def g_statistic(self, alt=True):
+    def g_statistic(self, alt: bool=True):
         inputs = self._arrange_fit_inputs(alt=alt)
         g_signal = stats.power_divergence(inputs['observed_signal'], inputs['expected_signal'], lambda_='log-likelihood')
         g_noise = stats.power_divergence(inputs['observed_noise'], inputs['expected_noise'], lambda_='log-likelihood')    
         return np.sum(g_signal.statistic) + np.sum(g_noise.statistic)
     
-    def chi_squared_statistic(self, alt=True):
+    def chi_squared_statistic(self, alt: bool=True):
         inputs = self._arrange_fit_inputs(alt=alt)
         chi_signal = stats.power_divergence(inputs['observed_signal'], inputs['expected_signal'], lambda_='pearson')
         chi_noise = stats.power_divergence(inputs['observed_noise'], inputs['expected_noise'], lambda_='pearson')    
         return np.sum(chi_signal.statistic) + np.sum(chi_noise.statistic)
     
-    def log_likelihood(self, alt=True):
+    def log_likelihood(self, alt: bool=True):
         inputs = self._arrange_fit_inputs(alt=alt)
         ll_signal = log_likelihood(inputs['observed_signal'], inputs['expected_signal'] / self.obs_signal.n)
         ll_noise = log_likelihood(inputs['observed_noise'], inputs['expected_noise'] / self.obs_noise.n)
         return ll_signal + ll_noise
 
-    def fit(self, method: Optional[str]='G', alt: Optional[bool]=True):
+    def fit(self, method: str='G', alt: bool=True, verbose: bool=False):
         """Fits the theoretical model to the observed data.
         
         Runs the optimisation function according to the chosen method and 
