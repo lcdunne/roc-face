@@ -170,6 +170,11 @@ class _BaseModel:
     @property
     def dof(self):
         return len(self.obs_signal.roc) + len(self.obs_noise.roc) - self.n_param
+    
+    @property
+    def curve(self):
+        params = {k: v for k, v in self.parameter_estimates.items() if k != 'criteria'}
+        return self.compute_expected(**params)
 
     def define_model_inputs(self, labels: list, values: list, n_criteria: int=0):
         """Maps from flat list of labels and x0 values to dict accepted by the
