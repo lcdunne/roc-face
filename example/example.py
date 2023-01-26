@@ -2,12 +2,9 @@ import json
 import logging
 import os
 from pprint import pprint
-import sys
-sys.path.insert(0, os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..')))
 import matplotlib.pyplot as plt
-from models import HighThreshold, SignalDetection, DualProcess
-import utils
+from signal_detection import utils
+from signal_detection.models import HighThreshold, SignalDetection, DualProcess
 
 logging.basicConfig(
     level=logging.INFO,
