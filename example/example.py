@@ -12,13 +12,39 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-# Example data from Dunn (2011) --------------------------------------------- #
-with open('example/example_data.json', 'r') as f:
-    DATA = json.load(f)
+def load_example_data(dataset_name):
+    """Load one of the example datasets.
+    
+    For the purpose of testing and giving examples, some example responses 
+    from published articles are used.
+    
+    Parameters
+    ----------
+    dataset_name : str
+        The name of the dataset to load. Must be one of the following:
+            'OC68': Ogilvie & Creelman (1968)
+            'StanTod99': Stanislaw & Todorov (1999)
+            'Dunn2011': Dunn (2011)
+            'Koen': The ROC toolbox (Tutorial 1)
+            'Dunne': A subset of data from the author's unpublished work.
+        
+    Returns
+    -------
+    tuple
+        A tuple of two lists. The first element is the signal and the second is
+        the noise array. The data are response frequencies.
+    """
+    with open('example/example_data.json', 'r') as f:
+        data = json.load(f)
+    
+    dataset = data.get(dataset_name.upper())
 
-dataset = 'Koen'  # OC68, StanTod99, Dunn2011, Koen, Dunne
-signal = DATA[dataset]['signal']
-noise = DATA[dataset]['noise']
+    if dataset is None:
+        raise ValueError(f"Dataset '{dataset_name}' not found. Available datasets are: {[d for d in data]}.")
+    
+    return dataset['signal'], dataset['noise']
+
+signal, noise = load_example_data('koen')
 # --------------------------------------------------------------------------- #
 # Specify data
 # signal = []

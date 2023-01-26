@@ -4,22 +4,22 @@
     "signal": [68, 37, 68, 46, 10, 21],
     "noise": [15, 17, 40, 83, 29, 66]
   },
-  "StanTod99": {
+  "STANTOD99": {
     "source": "Stanislaw & Todorov (1999)",
     "signal": [18, 12, 8, 8, 4, 0],
     "noise": [0, 7, 3, 1, 6, 8]
   },
-  "Dunn2011": {
+  "DUNN2011": {
     "source": "Dunn (2011)",
     "signal": [1230, 496, 358, 272, 215, 165],
     "noise": [111, 216, 349, 540, 625, 895]
   },
-  "Koen": {
+  "KOEN": {
     "source": "Koen (2017; 2020; https://github.com/jdkoen/roc_toolbox)",
     "signal": [169, 50, 58, 52, 44, 38, 34, 23, 14, 18],
     "noise": [27, 29, 52, 59, 76, 77, 60, 52, 32, 36]
   },
-  "Dunne": {
+  "DUNNE": {
     "source": null,
     "signal": [505, 248, 226, 172, 144, 93],
     "noise": [115, 185, 304, 523, 551, 397]
