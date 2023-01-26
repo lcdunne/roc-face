@@ -450,7 +450,8 @@ class _BaseModel:
             'SSE': self.sse,
         }
         
-        return self.parameter_estimates
+        if verbose:
+            return self.results, self.parameter_estimates
 
 if __name__ == '__main__':
     signal = [505,248,226,172,144,93]
