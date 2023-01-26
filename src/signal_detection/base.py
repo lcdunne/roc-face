@@ -121,7 +121,7 @@ class _BaseModel:
             'TPR': tpr,
             'FPR': fpr,
             'dprime': measures.d_prime(tpr, fpr),
-            'aprime': measures.a_prime(tpr, fpr),
+            # 'aprime': measures.a_prime(tpr, fpr), # TODO: vectorise to avoid ValueError
             'cbias': measures.c_bias(tpr, fpr),
             'beta': measures.beta(tpr, fpr),
             'AUC': auc(self.obs_noise.props_acc, self.obs_signal.props_acc)

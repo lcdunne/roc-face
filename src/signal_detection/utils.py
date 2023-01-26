@@ -141,6 +141,39 @@ def plot_roc(
     ax.set(xlabel='FP', ylabel='TP')
     return ax
 
+def regress(x, y, poly=1):
+    """Simple regression with optional polynomial expansion.
+
+    Parameters
+    ----------
+    x : array_like
+        The set of x values (predictor).
+    y : array_like
+        The set of y values (outcome).
+    poly : int, optional
+        The order of the polynomial regression. The 
+        default is 1 (linear regression).
+
+    Returns
+    -------
+    thetas : array_like
+        Parameters of the regression, obtained using numpy.polyfit (see the 
+        NumPy docs), in descending order from highest degree to lowest, with 
+        element `thetas[-1]` being the intercept of the line.
+    y_pred : array_like
+        The predictions for y given the parameters.
+
+    """
+    thetas = np.polyfit(x, y, poly)
+    linex = np.ones(len(x)).reshape(-1, 1)
+    
+    for degree in range(1, poly+1):
+        linex = np.c_[linex, np.power(x, degree)]
+    
+    y_pred = linex @ thetas[::-1]
+    
+    return thetas, y_pred
+
 def plot_zroc(
         signal: array_like,
         noise: array_like,
@@ -190,16 +223,9 @@ def plot_zroc(
     
     if data:
         ax.scatter(z_noise, z_signal, **kwargs, zorder=1e10)
-    
-    if reg:
-        thetas = np.polyfit(z_noise, z_signal, poly)
-        linex = np.ones(len(z_noise)).reshape(-1, 1)
 
-        # Create polynomial for z(FP)
-        for degree in range(1, poly+1):
-            linex = np.c_[linex, np.power(z_noise, degree)]
-        
-        y_pred = linex @ thetas[::-1]
+    if reg:
+        _, y_pred = regress(x=z_noise, y=z_signal, poly=poly)
         ax.plot(z_noise, y_pred)
 
     ax.axis('square')
