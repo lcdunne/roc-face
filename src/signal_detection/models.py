@@ -2,8 +2,8 @@ import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 from typing import Union, Optional
-from .base import _BaseModel
-from .utils import plot_roc, array_like
+from signal_detection.base import _BaseModel
+from signal_detection.utils import plot_roc, array_like
 
 class HighThreshold(_BaseModel):
     """High Threshold model class. Inherits functionality from _BaseModel class.
@@ -25,13 +25,13 @@ class HighThreshold(_BaseModel):
     __modelname__ = 'High Threshold'
     _has_criteria = False
 
-    def __init__(self, signal, noise):
+    def __init__(self, signal: array_like, noise: array_like):
         self._named_parameters = {'R': {'initial': 0.99, 'bounds': (0, 1)}}
         self._n_named_parameters = len(self._named_parameters) + 1 # Required because `g` (guess) parameter is implicit
         self.label = ''.join([i[0] for i in self.__modelname__.split()])
         super().__init__(signal, noise)
     
-    def compute_expected(self, R: float, full: Optional[bool]=False) -> tuple:
+    def compute_expected(self, R: float, full: bool=False) -> tuple:
         """Compute the expected signal and noise array using the High Threshold 
         model.
 
@@ -88,7 +88,7 @@ class SignalDetection(_BaseModel):
     __modelname__ = 'Equal Variance Signal Detection'
     _has_criteria = True
 
-    def __init__(self, signal, noise, equal_variance=True):
+    def __init__(self, signal: array_like, noise: array_like, equal_variance: bool=True):
         self._named_parameters = {
             'd': {'initial': 1, 'bounds': (None, None)}, # d may need to start above the likely value for convergence with some fit statistics
             # 'scale': {'initial': 1, 'bounds': (1, 1 if equal_variance else None)},
@@ -109,7 +109,7 @@ class SignalDetection(_BaseModel):
     def compute_expected(
             self,
             d: float,
-            scale: Optional[float]=1,
+            scale: float=1,
             criteria: Optional[array_like]=None
         ) -> tuple:
         """Compute the expected signal and noise array using the Signal Detection 
@@ -166,7 +166,7 @@ class DualProcess(_BaseModel):
     __modelname__ = 'Dual Process Signal Detection'
     _has_criteria = True
 
-    def __init__(self, signal, noise):
+    def __init__(self, signal: array_like, noise: array_like):
         self._named_parameters = {
             'd': {'initial': 1, 'bounds': (None, None)},
             'R': {'initial': 0.999, 'bounds': (0, 1)},
