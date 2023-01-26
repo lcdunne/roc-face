@@ -141,7 +141,7 @@ def plot_roc(
     ax.set(xlabel='FP', ylabel='TP')
     return ax
 
-def regress(x, y, poly=1):
+def regress(x: array_like, y: array_like, poly: int=1) -> tuple:
     """Simple regression with optional polynomial expansion.
 
     Parameters
