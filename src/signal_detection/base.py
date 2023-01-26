@@ -1,6 +1,7 @@
 import numpy as np
 from scipy import stats
 from scipy.optimize import minimize
+from . import measures
 from .utils import *
 
 class ResponseData:
@@ -86,7 +87,6 @@ class _BaseModel:
     def __init__(self, signal, noise):
         self.obs_signal = ResponseData(signal)
         self.obs_noise = ResponseData(noise)
-        self.auc = auc(self.obs_noise.props_acc, self.obs_signal.props_acc)
         
         # Dummy parameters in case no model is specified. This is the fully saturated model (not intended for use).
         if not self._named_parameters:
@@ -111,6 +111,21 @@ class _BaseModel:
         
         if not hasattr(self, '_n_named_parameters'):
             self._n_named_parameters = len(self._named_parameters)
+        
+        self._compute_performance()
+
+    def _compute_performance(self):
+        tpr = self.obs_signal.props_acc[self.signal_boundary]
+        fpr = self.obs_noise.props_acc[self.signal_boundary]
+        self.performance = {
+            'TPR': tpr,
+            'FPR': fpr,
+            'dprime': measures.d_prime(tpr, fpr),
+            'aprime': measures.a_prime(tpr, fpr),
+            'cbias': measures.c_bias(tpr, fpr),
+            'beta': measures.beta(tpr, fpr),
+            'AUC': auc(self.obs_noise.props_acc, self.obs_signal.props_acc)
+        }
     
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.__modelname__}>"
@@ -392,7 +407,6 @@ class _BaseModel:
         )
         
         # Take the results
-        self.fitted_values = self.optimisation_output.x
         self.statistic = self.optimisation_output.fun
         self.fit_success = self.optimisation_output.success
         if not self.fit_success:
@@ -401,7 +415,7 @@ class _BaseModel:
         # Define the model inputs as kwargs for the model's `compute_expected` method        
         self._parameter_estimates = self.define_model_inputs(
             labels=self.parameter_labels,
-            values=self.fitted_values,
+            values=self.optimisation_output.x,
             n_criteria=self.n_criteria
         )
         

@@ -138,7 +138,7 @@ def beta(tpr, fpr):
 
     See Snodgrass & Corwin (1988) for details.
     """
-    return np.exp((zscore(fpr)**2 - zscore(tpr)) / 2)**2
+    return np.exp( (zscore(fpr)**2 -  zscore(tpr)**2) / 2 )
 
 
 def beta_doubleprime(tpr, fpr, donaldson=False):
