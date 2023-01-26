@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import stats
 from scipy.optimize import minimize
-from utils import *
+from .utils import *
 
 class ResponseData:
     def __init__(self, freqs=None, props_acc=None, n=None, corrected=True):

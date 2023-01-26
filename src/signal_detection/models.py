@@ -2,8 +2,8 @@ import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 from typing import Union, Optional
-from base import _BaseModel
-from utils import plot_roc, array_like
+from .base import _BaseModel
+from .utils import plot_roc, array_like
 
 class HighThreshold(_BaseModel):
     """High Threshold model class. Inherits functionality from _BaseModel class.

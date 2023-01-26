@@ -1,7 +1,8 @@
 import numpy as np
 from itertools import product
 import pytest
-from .context import utils, models, datasets
+from signal_detection import utils, models
+from .context import datasets
 
 def uvsd_model(signal, noise):
     # Convenience
