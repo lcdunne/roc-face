@@ -239,7 +239,7 @@ def plot_zroc(
         data: bool=True,
         show_equation: bool=True,
         ax: Optional[Axes]=None,
-        data_kwargs: dict={},
+        scatter_kwargs: dict={},
         line_kwargs: dict={}
 
     ):
@@ -272,7 +272,7 @@ def plot_zroc(
         default is 1 (linear regression).
     show_equation : bool, optional
         Whether to show the equation as the label of the line (if plotted).
-    data_kwargs : dict, optional
+    scatter_kwargs : dict, optional
         Keyword arguments for the matplotlib.pyplot.scatter function. See 
         https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.scatter.html.
     line_kwargs : dict, optional
@@ -300,7 +300,7 @@ def plot_zroc(
     ax.axvline(0, lw=1, ls='dashed', c='k')
     
     if data:
-        ax.scatter(z_noise, z_signal, zorder=1e10, **data_kwargs)
+        ax.scatter(z_noise, z_signal, zorder=1e10, **scatter_kwargs)
 
     if reg:
         coefs, y_pred = regress(x=z_noise, y=z_signal, poly=poly)

@@ -260,7 +260,7 @@ if __name__ == '__main__':
     
     # Plot ROC curves
     fig, ax = plt.subplots(dpi=150)
-    plot_roc(evsd.obs_signal.roc, evsd.obs_noise.roc, ax=ax)
+    plot_roc(signal, noise, ax=ax)
     ax.plot(*ht.curve, label=ht.label)
     ax.plot(*evsd.curve, label=evsd.label)
     ax.plot(*uvsd.curve, label=uvsd.label)
