@@ -101,6 +101,7 @@ def compute_proportions(
 def plot_roc(
         signal: array_like,
         noise: array_like,
+        from_freqs: bool=True,
         ax: Optional[Axes]=None,
         chance: bool=True,
         **kwargs
@@ -111,9 +112,18 @@ def plot_roc(
     Parameters
     ----------
     signal : array_like
-        Signal array in probability space.
+        Signal array of responses. When `from_freqs=True` (the default), the 
+        values are assumed to be the raw observed frequencies for each response
+        category.
     noise : array_like
-        Noise array in probability space.
+        array of responses. When `from_freqs=True` (the default), the 
+        values are assumed to be the raw observed frequencies for each response
+        category.
+    from_freqs: True, optional
+        Specifies whether the arguments to `signal` and `noise` contain the 
+        raw frequency data (`from_freqs=True`) or if they are already prepared 
+        and in ROC space (cumulative probabilities; `from_freqs=False`). The 
+        default is True.
     ax : Optional[Axes], optional
         Matplotlib Axes object to plot to, if already defined. The default is 
         None.
@@ -131,6 +141,10 @@ def plot_roc(
         probability space.
 
     """
+    if from_freqs:
+        signal = compute_proportions(signal)
+        noise = compute_proportions(noise)
+    
     if ax is None:
         fig, ax = plt.subplots()
     
@@ -219,6 +233,7 @@ def linear_equation(coefs: Union[float, array_like], precision: int=2):
 def plot_zroc(
         signal: array_like,
         noise: array_like,
+        from_freqs: bool=True,
         reg: bool=True,
         poly: int=1,
         data: bool=True,
@@ -234,9 +249,18 @@ def plot_zroc(
     Parameters
     ----------
     signal : array_like
-        Signal array in probability space.
+        Signal array of responses. When `from_freqs=True` (the default), the 
+        values are assumed to be the raw observed frequencies for each response
+        category.
     noise : array_like
-        Noise array in probability space.
+        array of responses. When `from_freqs=True` (the default), the 
+        values are assumed to be the raw observed frequencies for each response
+        category.
+    from_freqs: True, optional
+        Specifies whether the arguments to `signal` and `noise` contain the 
+        raw frequency data (`from_freqs=True`) or if they are already prepared 
+        and in z-ROC space (z-scores of the cumulative probabilities; 
+        `from_freqs=False`). The default is True.
     ax : Optional[Axes], optional
         Matplotlib Axes object to plot to, if already defined. The default is 
         None.
@@ -262,6 +286,10 @@ def plot_zroc(
         z-space.
 
     """
+    if from_freqs:
+        signal = compute_proportions(signal)
+        noise = compute_proportions(noise)
+    
     z_signal = stats.norm.ppf(signal)
     z_noise = stats.norm.ppf(noise)
     
