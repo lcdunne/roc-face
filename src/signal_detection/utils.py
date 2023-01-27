@@ -1,9 +1,10 @@
 import numpy as np
+from numpy.typing import ArrayLike
 from prettytable import PrettyTable
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from scipy import stats
-from typing import Union, Optional
+from typing import Union, Optional, List
 
 numeric = Union[int, float, np.number]
 array_like = Union[list, tuple, np.ndarray]
@@ -313,7 +314,7 @@ def log_likelihood(f_obs: Union[float, array_like], p_exp: Union[float, array_li
     
     return (np.array(f_obs) * np.log(np.array(p_exp))).sum()
 
-def squared_errors(observed: np.array, expected: np.array) -> float:
+def squared_errors(observed: array_like, expected: array_like) -> float:
     """Computes the sum of squared errors between observed values and those 
     which were computed by the model.
 
@@ -332,7 +333,7 @@ def squared_errors(observed: np.array, expected: np.array) -> float:
     """
     return (observed - expected)**2
 
-def aic(k: int, LL: float=None) -> float:
+def aic(k: int, LL: float) -> float:
     """Computes Akaike's information criterion (AIC; https://en.wikipedia.org/wiki/Akaike_information_criterion).
     
     Is an estimator of quality of each model relative to others, enabling model 

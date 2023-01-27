@@ -8,7 +8,7 @@ class ResponseData:
     def __init__(
         self, freqs: Optional[array_like]=None,
         props_acc: Optional[array_like]=None,
-        n: int=None,
+        n: Optional[int]=None,
         corrected: bool=True
     ):
         if freqs is not None:
@@ -85,9 +85,9 @@ class _BaseModel:
 
     """
     # Defaults
-    __modelname__ = 'none'
-    _has_criteria = False
-    _named_parameters = {}
+    __modelname__: str = 'none'
+    _has_criteria: bool = False
+    _named_parameters: dict = {}
 
     def __init__(self, signal: array_like, noise: array_like):
         self.obs_signal = ResponseData(signal)
@@ -181,7 +181,7 @@ class _BaseModel:
         params = {k: v for k, v in self.parameter_estimates.items() if k != 'criteria'}
         return self.compute_expected(**params)
 
-    def define_model_inputs(self, labels: list, values: list, n_criteria: int=0):
+    def define_model_inputs(self, labels: list, values:array_like, n_criteria: int=0):
         """Maps from flat list of labels and x0 values to dict accepted by the
         `<model>.compute_expected(...)` function.
 
@@ -190,10 +190,12 @@ class _BaseModel:
         labels : list
             A list of labels defining the parameter names.
         values : list
-            A list of parameter values corresponding to the list of labels. 
-            These must be in the same order.
+            A list of parameter values in the same order as the list of labels. 
         n_criteria : int, optional
-            DESCRIPTION. The default is 0.
+            Number of criterion parameters. For all models derived from 
+            signal-detection, this will be equal to n-1 where n is the number 
+            of response categories (e.g. with 6 rating scale response 
+            categories, the number of criteria will be 5). The default is 0.
 
         Returns
         -------
@@ -401,7 +403,7 @@ class _BaseModel:
 
         """
         self.fit_method = method
-        self.convergence = []
+        self.convergence: list = []
         
         # Run the fit function
         self.optimisation_output = minimize(

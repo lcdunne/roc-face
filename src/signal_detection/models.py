@@ -165,6 +165,7 @@ class DualProcess(_BaseModel):
     """
     __modelname__ = 'Dual Process Signal Detection'
     _has_criteria = True
+    label = 'DPSD'
 
     def __init__(self, signal: array_like, noise: array_like):
         self._named_parameters = {
@@ -172,7 +173,7 @@ class DualProcess(_BaseModel):
             'R': {'initial': 0.999, 'bounds': (0, 1)},
         }
         
-        self.label = ''.join([i[0] for i in self.__modelname__.split()])
+        # self.label = ''.join([i[0] for i in self.__modelname__.split()])
         super().__init__(signal, noise)
     
     @property
