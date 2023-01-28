@@ -178,19 +178,21 @@ class DualProcess(_BaseModel):
     
     @property
     def familiarity(self):
-        """float: Estimate of familiarity."""
-        if not hasattr(self, 'fitted_parameters'):
+        """float: Estimate of familiarity.
+        
+        The probability that an item is familiar (see Yonelinas, 1996, p.431)."""
+        if not hasattr(self, 'parameter_estimates'):
             return None
-        d = self.fitted_parameters.get('d')
-        c_x = self.fitted_parameters['criteria'][self.signal_boundary]
+        d = self.parameter_estimates.get('d')
+        c_x = self.parameter_estimates['criteria'][self.signal_boundary]
         return stats.norm.cdf( d / 2 - c_x )
     
     @property
     def recollection(self):
         """float: Estimate of recollection."""
-        if not hasattr(self, 'fitted_parameters'):
+        if not hasattr(self, 'parameter_estimates'):
             return None        
-        return self.fitted_parameters.get('R')
+        return self.parameter_estimates.get('R')
 
     def compute_expected(
             self,
