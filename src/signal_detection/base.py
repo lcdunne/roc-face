@@ -461,6 +461,52 @@ class _BaseModel:
         
         if verbose:
             return self.results, self.parameter_estimates
+    
+    def compare(self, other, method='G'):
+        """Compare two fitted models.
+        
+        Test whether there is a significant improvement of one model over the 
+        other. This is a nested test and therefore assumes that one of the 
+        models must have fewer degrees of freedom than the other. Note that 
+        this is just one way to compare two models and is provided here as a 
+        convenience method.
+
+        Parameters
+        ----------
+        other : Subclass of _BaseModel
+            Any model that is a subclass of _BaseModel.
+        method: str
+            Either 'G' or 'X2'.
+
+        Returns
+        -------
+        result
+            Tuple containing:
+                (1) the direction of comparison (determined from the degrees of
+                freedom for self and other).
+                (2) The statistic
+                (3) the degree of freedom
+                (4) the p-value
+
+        """
+        # self & other must be fitted.
+        if self.dof > other.dof:
+            a, b = self, other
+        elif self.dof < other.dof:
+            a, b = other, self
+        else:
+            raise ValueError(f"Nested model comparison requires different degrees of freedom, but both models have the same ({self.dof}, {other.dof}) ")
+    
+        if method.upper() == 'G':
+            methodsym = 'G'
+            gof = a.gstat - b.gstat
+        else:
+            methodsym = 'χ^2'
+            gof = a.chistat - b.chistat
+        
+        dof = a.dof - b.dof
+        p = stats.distributions.chi2.sf(gof, dof)
+        return f"{methodsym}({a.label} - {b.label})", gof, dof, p
 
 if __name__ == '__main__':
     signal = [505,248,226,172,144,93]
