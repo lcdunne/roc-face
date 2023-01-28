@@ -97,7 +97,6 @@ def a_prime(tpr: float, fpr:float) -> float:
     see Snograss & Corwin (1988). Note that `d\`` is  preferred.
     """
     if tpr >= fpr:
-        # TODO: this comparison leads to an error when inputs are arrays - needs fix.
         numerator = ((tpr - fpr) * (1 + tpr - fpr))
         denominator = 4 * tpr * (1 - fpr)
         return 0.5 + (numerator / denominator)

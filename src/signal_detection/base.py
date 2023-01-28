@@ -132,7 +132,7 @@ class _BaseModel:
             'TPR': tpr,
             'FPR': fpr,
             'dprime': measures.d_prime(tpr, fpr),
-            # 'aprime': measures.a_prime(tpr, fpr), # TODO: vectorise to avoid ValueError
+            'aprime': measures.a_prime(tpr, fpr),
             'cbias': measures.c_bias(tpr, fpr),
             'beta': measures.beta(tpr, fpr),
             'Az': measures.a_z(self.z_intercept, self.z_slope),
@@ -167,10 +167,7 @@ class _BaseModel:
     def signal_boundary(self):
         """int: The index in the criterion array that corresponds to the 
         boundary between signal and noise (the lowest signal criterion)."""
-        if not self._has_criteria:
-            return
-        c = list(self._criteria.keys())
-        return c.index( c[:int(np.ceil(len(c)/2))][-1] )
+        return int(len(self.obs_signal.freqs)/2) - 1
     
     @property
     def n_param(self):
