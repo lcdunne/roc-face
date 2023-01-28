@@ -1,6 +1,7 @@
 nb/
 shed/
 .vscode/
+*.mplstyle
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
