@@ -45,12 +45,12 @@ def test_fit_statistics(dataset_name, dataset, model, fitstat, expected_fitstat,
     # Assert
     fit = m.optimisation_output.fun
     assert m.results['fit-success'] == True, f"{m.label} model fit failed for {dataset_name} dataset..."
-    assert np.allclose(fit, expected_fitstat, rtol=.01), f"Expected {fitstat}={expected_fitstat}, but got {fitstat}{fit}..."
+    assert np.allclose(fit, expected_fitstat, rtol=.01), f"Expected {fitstat}={expected_fitstat}, but got {fitstat}={fit}..."
 
 
 # Test all data against ROC toolbox for fitted parameter estimates
 @pytest.mark.parametrize('dataset_name,dataset,model,fitstat,expected_fitstat,expected_fitted_params', fit_func_contingencies)
-def test_fitted_parameters(dataset_name, dataset, model, fitstat, expected_fitstat,expected_fitted_params):
+def test_parameter_estimates(dataset_name, dataset, model, fitstat, expected_fitstat,expected_fitted_params):
     m = model(dataset['signal'], dataset['noise'])
     m.fit(fitstat, alt=False)
 
