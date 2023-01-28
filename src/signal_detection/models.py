@@ -242,22 +242,22 @@ if __name__ == '__main__':
     noise = [115,185,304,523,551,397]
 
     fit_method = 'G'
-    alt = True # When false, matches ROC toolbox but gives poor fit for HT model.
+    cumulative = True # When false, matches ROC toolbox but gives poor fit for HT model.
     
     ht = HighThreshold(signal, noise)
-    ht.fit(fit_method, alt=alt)
+    ht.fit(fit_method, cumulative=cumulative)
     print(ht.results)
     
     evsd = SignalDetection(signal, noise, equal_variance=True)
-    evsd.fit(fit_method, alt=alt)
+    evsd.fit(fit_method, cumulative=cumulative)
     print(evsd.results)
     
     uvsd = SignalDetection(signal, noise, equal_variance=False)
-    uvsd.fit(fit_method, alt=alt, verbose=True)
+    uvsd.fit(fit_method, cumulative=cumulative, verbose=True)
     print(uvsd.results)
 
     dpsd = DualProcess(signal, noise)
-    dpsd.fit(fit_method, alt=alt)
+    dpsd.fit(fit_method, cumulative=cumulative)
     print(dpsd.results)
     
     # Plot ROC curves

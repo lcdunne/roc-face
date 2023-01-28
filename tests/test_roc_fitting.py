@@ -41,7 +41,7 @@ def test_fit_statistics(dataset_name, dataset, model, fitstat, expected_fitstat,
     # Arrange
     m = model(dataset['signal'], dataset['noise'])
     # Act
-    m.fit(fitstat, alt=False)
+    m.fit(fitstat, cumulative=False)
     # Assert
     fit = m.optimisation_output.fun
     assert m.results['fit-success'] == True, f"{m.label} model fit failed for {dataset_name} dataset..."
@@ -52,7 +52,7 @@ def test_fit_statistics(dataset_name, dataset, model, fitstat, expected_fitstat,
 @pytest.mark.parametrize('dataset_name,dataset,model,fitstat,expected_fitstat,expected_fitted_params', fit_func_contingencies)
 def test_parameter_estimates(dataset_name, dataset, model, fitstat, expected_fitstat,expected_fitted_params):
     m = model(dataset['signal'], dataset['noise'])
-    m.fit(fitstat, alt=False)
+    m.fit(fitstat, cumulative=False)
 
     for param, expected in expected_fitted_params.items():
         observed_value = m.parameter_estimates[param]
@@ -60,11 +60,11 @@ def test_parameter_estimates(dataset_name, dataset, model, fitstat, expected_fit
 
 
 def test_alt_true_better_for_high_threshold():
-    # Test that the results using alt=True are far better than alt=False (for the HT model)
+    # Test that the results using cumulative=True are far better than cumulative=False (for the HT model)
     return
 
 def test_alt_true_similar_to_alt_false():
-    # Test that the results from alt=True are comparable to alt=False (for all SDT models)
+    # Test that the results from cumulative=True are comparable to cumulative=False (for all SDT models)
     return
 
 # all_models = [
@@ -85,14 +85,14 @@ def test_alt_true_similar_to_alt_false():
 #         datasets.items(), # x5
 #         all_models, # x4
 #         ['chi', 'g', 'll', 'sse'], #objective (x4)
-#         [True, False], # alt (x2)
+#         [True, False], # cumulative (x2)
 #     )
 # )
 
-# @pytest.mark.parametrize("dataset,model_defs,objective,alt", all_contingencies[:5])
-# def test_fit_succeeds(dataset, model_defs, objective, alt):
+# @pytest.mark.parametrize("dataset,model_defs,objective,cumulative", all_contingencies[:5])
+# def test_fit_succeeds(dataset, model_defs, objective, cumulative):
 #     '''Test that the minimisation succeeds for every dataset & every model'''
 #     dataset_name=dataset[0]
 #     m = model_defs[0](dataset[1]['signal'], dataset[1]['noise'], **model_defs[1])
-#     m.fit(objective, alt)
+#     m.fit(objective, cumulative)
 #     assert m.results['fit-success'] == True, f"{m.label} model fit failed for {dataset_name} dataset."

@@ -241,13 +241,13 @@ class _BaseModel:
         """
         return self.obs_noise.roc.copy(), self.obs_signal.roc.copy()
 
-    def _arrange_fit_inputs(self, alt: bool=True):
+    def _arrange_fit_inputs(self, cumulative: bool=True):
         """Convenience function to arrange observed & expected signal & noise 
         inputs.
 
         Parameters
         ----------
-        alt : bool, optional
+        cumulative : bool, optional
             Whether or not to use the alternative input approach. If `True`, 
             each input is a 2d array of cumulative inclusion (O, E; first 
             dimension) and exclusion (N-O, N-E; second dimension) frequencies.
@@ -265,7 +265,7 @@ class _BaseModel:
             chosen fitting functions (G, χ^2, log-likelihood, or SSE).
 
         """
-        if alt:
+        if cumulative:
             observed_signal = np.array([self.obs_signal.freqs_acc[:-1], self.obs_signal.n - self.obs_signal.freqs_acc[:-1]])
             observed_noise = np.array([self.obs_noise.freqs_acc[:-1], self.obs_noise.n - self.obs_noise.freqs_acc[:-1]])
             expected_signal = np.array([self.exp_signal.freqs_acc[:-1], self.obs_signal.n - self.exp_signal.freqs_acc[:-1]])
@@ -283,7 +283,7 @@ class _BaseModel:
             'expected_noise': expected_noise
         }
 
-    def _objective(self, x0: array_like, method: str='G', alt: bool=True) -> float:
+    def _objective(self, x0: array_like, method: str='G', cumulative: bool=True) -> float:
         """The objective function to minimise. Not intended to be manually 
         called.
         
@@ -307,7 +307,7 @@ class _BaseModel:
             the objective function is then calculated.
         method : str, optional
             See the .fit method for details. The default is 'G'.
-        alt : bool, optional
+        cumulative : bool, optional
             Use alternative inputs to goodness-of-fit function. If False, the 
             inputs are simply the observed and expected non-cumulative 
             frequencies for each rating category. If True, the inputs are the 
@@ -345,11 +345,11 @@ class _BaseModel:
         if method.upper() == 'SSE':
             fit_value = self.sum_of_squared_errors()
         elif method.upper() == 'G':     
-            fit_value = self.g_statistic(alt)
+            fit_value = self.g_statistic(cumulative)
         elif method.upper() == 'X2':     
-            fit_value = self.chi_squared_statistic(alt)
+            fit_value = self.chi_squared_statistic(cumulative)
         elif method.upper() == 'LL':
-            fit_value = -self.log_likelihood(alt) # Flip the sign for minimisation
+            fit_value = -self.log_likelihood(cumulative) # Flip the sign for minimisation
         else:
             raise ValueError(f"Method must be one of SSE, G, X2, or LL, but got {method}.")
         if hasattr(self, 'convergence'):
@@ -363,25 +363,25 @@ class _BaseModel:
         sse_noise = squared_errors(self.obs_noise.props, self.exp_noise.props).sum()
         return sse_signal + sse_noise
     
-    def g_statistic(self, alt: bool=True):
-        inputs = self._arrange_fit_inputs(alt=alt)
+    def g_statistic(self, cumulative: bool=True):
+        inputs = self._arrange_fit_inputs(cumulative=cumulative)
         g_signal = stats.power_divergence(inputs['observed_signal'], inputs['expected_signal'], lambda_='log-likelihood')
         g_noise = stats.power_divergence(inputs['observed_noise'], inputs['expected_noise'], lambda_='log-likelihood')    
         return np.sum(g_signal.statistic) + np.sum(g_noise.statistic)
     
-    def chi_squared_statistic(self, alt: bool=True):
-        inputs = self._arrange_fit_inputs(alt=alt)
+    def chi_squared_statistic(self, cumulative: bool=True):
+        inputs = self._arrange_fit_inputs(cumulative=cumulative)
         chi_signal = stats.power_divergence(inputs['observed_signal'], inputs['expected_signal'], lambda_='pearson')
         chi_noise = stats.power_divergence(inputs['observed_noise'], inputs['expected_noise'], lambda_='pearson')    
         return np.sum(chi_signal.statistic) + np.sum(chi_noise.statistic)
     
-    def log_likelihood(self, alt: bool=True):
-        inputs = self._arrange_fit_inputs(alt=alt)
+    def log_likelihood(self, cumulative: bool=True):
+        inputs = self._arrange_fit_inputs(cumulative=cumulative)
         ll_signal = log_likelihood(inputs['observed_signal'], inputs['expected_signal'] / self.obs_signal.n)
         ll_noise = log_likelihood(inputs['observed_noise'], inputs['expected_noise'] / self.obs_noise.n)
         return ll_signal + ll_noise
 
-    def fit(self, method: str='G', alt: bool=True, verbose: bool=False):
+    def fit(self, method: str='G', cumulative: bool=True, verbose: bool=False):
         """Fits the theoretical model to the observed data.
         
         Runs the optimisation function according to the chosen method and 
@@ -416,7 +416,7 @@ class _BaseModel:
             self.optimisation_output = minimize(
                 fun=self._objective,
                 x0=list(self.initial_parameters.values()),
-                args=(self.fit_method, alt),
+                args=(self.fit_method, cumulative),
                 bounds=self.parameter_boundaries,
                 method='nelder-mead',
                 tol=1e-4,
@@ -441,9 +441,9 @@ class _BaseModel:
         
         # Fit statistics
         self.sse = self.sum_of_squared_errors()
-        self.gstat = self.g_statistic(alt)
-        self.chistat = self.chi_squared_statistic(alt)
-        self.loglik = self.log_likelihood(alt)
+        self.gstat = self.g_statistic(cumulative)
+        self.chistat = self.chi_squared_statistic(cumulative)
+        self.loglik = self.log_likelihood(cumulative)
         self.aic = aic(k=self.n_param, LL=self.loglik)
         self.bic = bic(k=self.n_param, n=self.obs_signal.n + self.obs_noise.n, LL=self.loglik)
         
