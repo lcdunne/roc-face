@@ -61,14 +61,14 @@ Once a model has been instantiated, we can view it in ROC space and see the AUC 
 >>> import matplotlib.pyplot as plt
 >>> from utils import plot_roc
 
-# Just plots the original datapoints
->>> plot_roc(evsd.obs_signal.roc, evsd.obs_noise.roc, c='k'); plt.show()
+# Plot the original datapoints
+>>> plot_roc(signal, noise); plt.show()
 
 >>> print(evsd.auc)
 0.7439343243677308
 ```
 
-<img src="https://github.com/lcdunne/signal-detection/raw/main/example/_simple_ROC.png" alt="" width="620">
+<img src="https://github.com/lcdunne/signal-detection/raw/main/example/simple_ROC.svg" alt="" width="620">
 
 We can fit the two models (`evsd` and `uvsd`) as follows:
 
@@ -151,19 +151,15 @@ Finally, we can just view the ROC data and the two fitted models, as follows:
         label=uvsd.label
     )
 
-# Just plots the original datapoints
->>> plot_roc(evsd.obs_signal.roc, evsd.obs_noise.roc, ax=ax[0], c='k')
+# Plot the original datapoints
+>>> plot_roc(signal, noise, c='k', ax=ax[0])
 
 # Plot z-ROC with second-order polynomial fit to the second subplot axis
->>> plot_zroc(evsd.obs_signal.roc, evsd.obs_noise.roc, reg=True, poly=2, ax=ax[1], c='k')
+>>> plot_zroc(signal, noise, reg=True, poly=2, c='k', ax=ax[1])
 
 >>> ax[0].legend(loc='lower right')
 
 >>> plt.tight_layout()
 >>> plt.show()
 ```
-<img src="https://github.com/lcdunne/signal-detection/raw/main/example/_example_evsd-uvsd.png" alt="" width="620">
-
-## Useful links:
-
-[Intro to SDT](https://www.birmingham.ac.uk/Documents/college-les/psych/vision-laboratory/sdtintro.pdf)
+<img src="https://github.com/lcdunne/signal-detection/raw/main/example/example_EVSD-UVSD.svg" alt="" width="620">
