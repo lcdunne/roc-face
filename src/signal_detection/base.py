@@ -4,6 +4,8 @@ from scipy.optimize import minimize
 import warnings
 from signal_detection import measures
 from signal_detection.utils import *
+from signal_detection.fit_functions import log_likelihood, squared_errors, aic, bic
+
 
 class ResponseData:
     def __init__(
@@ -442,8 +444,8 @@ class _BaseModel:
         self.gstat = self.g_statistic(alt)
         self.chistat = self.chi_squared_statistic(alt)
         self.loglik = self.log_likelihood(alt)
-        self.aic = 2 * self.n_param - 2 * self.loglik
-        self.bic = self.n_param * np.log(self.obs_signal.n + self.obs_noise.n) - 2 * self.loglik
+        self.aic = aic(k=self.n_param, LL=self.loglik)
+        self.bic = bic(k=self.n_param, n=self.obs_signal.n + self.obs_noise.n, LL=self.loglik)
         
         # TODO: Define nice results output
         self.results = {
