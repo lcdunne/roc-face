@@ -1,7 +1,23 @@
 import numpy as np
 from scipy.stats import norm
-from typing import Union
+from typing import Union, Optional
 zscore = norm.ppf
+
+def compute_performance(tpr: float, fpr: float, z_intercept: Optional[float]=None, z_slope: Optional[float]=None) -> dict:
+    performance = {
+            'TPR': tpr,
+            'FPR': fpr,
+            'dprime': d_prime(tpr, fpr),
+            'aprime': a_prime(tpr, fpr),
+            'cbias': c_bias(tpr, fpr),
+            'beta': beta(tpr, fpr),
+    }
+
+    if z_intercept is not None and z_slope is not None:
+        performance['Az'] = a_z(z_intercept, z_slope)
+    
+    return performance
+        
 
 
 def d_prime(tpr: Union[float, np.ndarray], fpr: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
@@ -198,4 +214,5 @@ if __name__ == '__main__':
     print(beta(.75, .21))
     print(beta_doubleprime(.75, .21))
     print(beta_doubleprime(.75, .21, donaldson=True))
+    print(compute_performance(.75, .21, 1.23, 0.79))
 

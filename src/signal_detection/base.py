@@ -126,18 +126,17 @@ class _BaseModel:
             warnings.warn("No model has been specified. Note that the _BaseModel class is not intended for primary use.")
 
     def _compute_performance(self):
-        tpr = self.obs_signal.props_acc[self.signal_boundary]
-        fpr = self.obs_noise.props_acc[self.signal_boundary]
-        self.performance = {
-            'TPR': tpr,
-            'FPR': fpr,
-            'dprime': measures.d_prime(tpr, fpr),
-            'aprime': measures.a_prime(tpr, fpr),
-            'cbias': measures.c_bias(tpr, fpr),
-            'beta': measures.beta(tpr, fpr),
-            'Az': measures.a_z(self.z_intercept, self.z_slope),
-            'AUC': auc(self.obs_noise.props_acc, self.obs_signal.props_acc)
-        }
+        # Extend the measures.compute_performance function ot include the AUC
+        self.performance = measures.compute_performance(
+            self.obs_signal.props_acc[self.signal_boundary],
+            self.obs_noise.props_acc[self.signal_boundary],
+            self.z_intercept,
+            self.z_slope
+        )
+
+        self.performance['AUC'] = auc(self.obs_noise.props_acc, self.obs_signal.props_acc)
+
+
     
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.__modelname__}>"
