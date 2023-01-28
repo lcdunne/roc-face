@@ -1,8 +1,9 @@
 import numpy as np
 from scipy import stats
 from scipy.optimize import minimize
-from . import measures
-from .utils import *
+import warnings
+from signal_detection import measures
+from signal_detection.utils import *
 
 class ResponseData:
     def __init__(
@@ -85,9 +86,10 @@ class _BaseModel:
 
     """
     # Defaults
-    __modelname__: str = 'none'
+    __modelname__: str = 'Base Model'
     _has_criteria: bool = False
     _named_parameters: dict = {}
+    label: str = 'BASE'
 
     def __init__(self, signal: array_like, noise: array_like):
         self.obs_signal = ResponseData(signal)
@@ -119,6 +121,9 @@ class _BaseModel:
         
         (self.z_slope, self.z_intercept), _ = regress( self.obs_noise.z, self.obs_signal.z, poly=1 )
         self._compute_performance()
+        
+        if self.label == 'BASE':
+            warnings.warn("No model has been specified. Note that the _BaseModel class is not intended for primary use.")
 
     def _compute_performance(self):
         tpr = self.obs_signal.props_acc[self.signal_boundary]
@@ -403,6 +408,9 @@ class _BaseModel:
 
         """
         self.fit_method = method
+        if self.fit_method == 'SSE':
+            warnings.warn("The SSE fit statistic is not recommended. Please consider using G or CHI2.")
+        
         self.convergence: list = []
         
         # Run the fit function
