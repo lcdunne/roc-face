@@ -414,15 +414,16 @@ class _BaseModel:
         self.convergence: list = []
         
         # Run the fit function
-        self.optimisation_output = minimize(
-            fun=self._objective,
-            x0=list(self.initial_parameters.values()),
-            args=(self.fit_method, alt),
-            bounds=self.parameter_boundaries,
-            method='nelder-mead',
-            tol=1e-4,
-            options={'maxiter': 100000, 'xatol': 1e-8 ,'fatol': 1e-4}
-        )
+        with np.errstate(divide='ignore'):
+            self.optimisation_output = minimize(
+                fun=self._objective,
+                x0=list(self.initial_parameters.values()),
+                args=(self.fit_method, alt),
+                bounds=self.parameter_boundaries,
+                method='nelder-mead',
+                tol=1e-4,
+                options={'maxiter': 100000, 'xatol': 1e-8 ,'fatol': 1e-4}
+            )
         
         # Take the results
         self.statistic = self.optimisation_output.fun
