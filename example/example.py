@@ -60,7 +60,7 @@ dpsd = DualProcess(signal, noise)
 ht.fit(alt=False)
 evsd.fit(alt=False)
 uvsd.fit(alt=False)
-dpsd.fit('SSE', alt=False)
+dpsd.fit(alt=False)
 
 # Show results
 pprint(ht.results)
