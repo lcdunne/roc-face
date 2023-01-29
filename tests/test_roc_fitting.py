@@ -44,7 +44,7 @@ def test_fit_statistics(dataset_name, dataset, model, fitstat, expected_fitstat,
     m.fit(fitstat, cumulative=False)
     # Assert
     fit = m.optimisation_output.fun
-    assert m.results['fit-success'] == True, f"{m.label} model fit failed for {dataset_name} dataset..."
+    assert m.results['success'] == True, f"{m.label} model fit failed for {dataset_name} dataset..."
     assert np.allclose(fit, expected_fitstat, rtol=.01), f"Expected {fitstat}={expected_fitstat}, but got {fitstat}={fit}..."
 
 
