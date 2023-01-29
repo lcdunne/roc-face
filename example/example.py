@@ -1,16 +1,8 @@
 import json
-import logging
-import os
-from pprint import pprint
 import matplotlib.pyplot as plt
 from signal_detection import utils
 from signal_detection.models import HighThreshold, SignalDetection, DualProcess
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='[%(asctime)s] %(levelname)s: %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
 
 def load_example_data(dataset_name):
     """Load one of the example datasets.
@@ -34,7 +26,7 @@ def load_example_data(dataset_name):
         A tuple of two lists. The first element is the signal and the second is
         the noise array. The data are response frequencies.
     """
-    with open('example/example_data.json', 'r') as f:
+    with open('example_data.json', 'r') as f:
         data = json.load(f)
     
     dataset = data.get(dataset_name.upper())
@@ -57,28 +49,28 @@ uvsd = SignalDetection(signal, noise, equal_variance=False)
 dpsd = DualProcess(signal, noise)
 
 # Fit the models
-ht.fit(alt=False)
-evsd.fit(alt=False)
-uvsd.fit(alt=False)
-dpsd.fit(alt=False)
+ht.fit(cumulative=False)
+evsd.fit(cumulative=False)
+uvsd.fit(cumulative=False)
+dpsd.fit(cumulative=False)
 
 # Show results
-pprint(ht.results)
-pprint(evsd.results)
-pprint(uvsd.results)
-pprint(dpsd.results)
+print(ht.results)
+print(evsd.results)
+print(uvsd.results)
+print(dpsd.results)
 
-pprint(dpsd.parameter_estimates)
-pprint({'Recollection': dpsd.recollection, 'Familiarity': dpsd.familiarity})
+print(dpsd.parameter_estimates)
+print({'Recollection': dpsd.recollection, 'Familiarity': dpsd.familiarity})
 
 # Plot a model
 fig, ax = plt.subplots(1, 2, dpi=150)
 
 utils.plot_roc(signal, noise, c='k', ax=ax[0])
-ax[0].plot(*ht.compute_expected(**ht.parameter_estimates, full=True), label='HT')
-ax[0].plot(*evsd.compute_expected(**evsd.parameter_estimates), label='EVSD')
-ax[0].plot(*uvsd.compute_expected(**uvsd.parameter_estimates), label='UVSD')
-ax[0].plot(*dpsd.compute_expected(**dpsd.parameter_estimates), label='DPSD')
+ax[0].plot(*ht.curve, label='HT')
+ax[0].plot(*evsd.curve, label='EVSD')
+ax[0].plot(*uvsd.curve, label='UVSD')
+ax[0].plot(*dpsd.curve, label='DPSD')
 
 ax[0].legend(loc='lower right')
 
