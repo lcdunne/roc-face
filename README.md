@@ -60,7 +60,7 @@ Given a set of responses to a set of signal and noise trials, the ROC and z-ROC 
 >>> ax[1].legend()
 >>> plt.show()
 ```
-<img src="https://github.com/lcdunne/signal-detection/raw/develop/example/simple_ROC_zROC.png" alt="" width="620">
+<img src="https://github.com/lcdunne/signal-detection/raw/develop/example/example_ROC_zROC.png" alt="" width="620">
 
 The `utils.plot_roc` and `utils.plot_zroc` functions are for convenience as 
 they carry out some minor plotting customisations (square axes, chance-line, 
@@ -138,4 +138,4 @@ Finally, we can just view the ROC data and the two fitted models as follows:
 >>> ax.legend(loc='lower right')
 >>> plt.show()
 ```
-<img src="https://github.com/lcdunne/signal-detection/raw/develop/example/example_EVSD_UVSD.png" alt="" width="620">
+<img src="https://github.com/lcdunne/signal-detection/raw/develop/example/example_EVSD_UVSD.png" alt="" width="480">
