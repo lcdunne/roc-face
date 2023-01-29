@@ -33,7 +33,7 @@ You can also return a dictionary of measures in a similar way:
 {
     'FPR': 0.21,
     'TPR': 0.75,
-    'dprime': 1.480910997214322
+    'dprime': 1.480910997214322,
     'cbias': 0.06596574841107933,
     'aprime': 0.850886075949367,
     'beta': 1.1026202605581668,
@@ -62,8 +62,10 @@ Given a set of responses to a set of signal and noise trials, the ROC and z-ROC 
 ```
 <img src="https://github.com/lcdunne/signal-detection/raw/develop/example/simple_ROC_zROC.png" alt="" width="620">
 
-The line on the *z*-ROC in this example is a simple linear fit, which is useful 
-for interpreting the data.
+The `utils.plot_roc` and `utils.plot_zroc` functions are for convenience as 
+they carry out some minor plotting customisations (square axes, chance-line, 
+etc). The fitted line on the *z*-ROC in this example is a simple linear model, 
+which is useful for interpreting the ROC data.
 
 With the signal and noise data, the different models can be fitted.
 
@@ -97,7 +99,7 @@ After creation, the models are fit as follows:
     }
 )
 ```
-Using `verbose=True` in the `fit` method prints out the results of the fitting procedure when it ends, along with the parameter estimates. After calling `fit`, they can be obtained with `.results` and `.parameter_estimates`:
+Using `verbose=True` in the `fit` method prints out the results of the fitting procedure when it ends, along with the parameter estimates. After calling `fit`, they can also be accessed via `.results` and `.parameter_estimates`:
 ```python
 >>> uvsd.fit()
 >>> uvsd.results
@@ -119,18 +121,17 @@ Using `verbose=True` in the `fit` method prints out the results of the fitting p
 }
 ```
 
-These models can also be compared to one another. Although it is common practice to compare with AIC or BIC (see the results), it can also be done with the `compare` method:
+These models can also be compared to one another. Although it is common practice to compare with the AIC or BIC values (see the results), it can also be done with the `.compare` method:
 ```python
 >>> evsd.compare(uvsd)
 ('G(EVSD - UVSD)', 85.66079512089179, 1, 2.1360619666273588e-20)
 ```
 This shows that the UVSD provides a significantly better fit than the EVSD.
 
-Finally, we can just view the ROC data and the two fitted models, as follows:
+Finally, we can just view the ROC data and the two fitted models as follows:
 
 ```python
 >>> fig, ax = plt.subplots(dpi=120)
-
 >>> utils.plot_roc(signal, noise, c='k', ax=ax, label='data')
 >>> ax.plot(*evsd.curve, label='EVSD')
 >>> ax.plot(*uvsd.curve, label='UVSD')
