@@ -358,7 +358,6 @@ class _BaseModel:
         return fit_value
     
     def sum_of_squared_errors(self):
-        # SSE is 
         sse_signal = squared_errors(self.obs_signal.props, self.exp_signal.props).sum()
         sse_noise = squared_errors(self.obs_noise.props, self.exp_noise.props).sum()
         return sse_signal + sse_noise
@@ -407,7 +406,7 @@ class _BaseModel:
         """
         self.fit_method = method
         if self.fit_method == 'SSE':
-            warnings.warn("The SSE fit statistic is not recommended. Please consider using G or CHI2.")
+            warnings.warn("The SSE fit statistic is not recommended. Please consider using G or X2.")
         
         self.convergence: list = []
         
