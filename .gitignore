@@ -2,6 +2,7 @@ nb/
 shed/
 .vscode/
 *.mplstyle
+*.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
