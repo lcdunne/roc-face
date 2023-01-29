@@ -490,7 +490,9 @@ class _BaseModel:
                 (4) the p-value
 
         """
-        # self & other must be fitted.
+        if not all([self.fit_success, other.fit_success]):
+            raise ValueError("Both models have to be fit, but one or both were not.")
+        
         if self.dof > other.dof:
             a, b = self, other
         elif self.dof < other.dof:
