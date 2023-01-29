@@ -451,8 +451,8 @@ class _BaseModel:
         # TODO: Define nice results output
         self.results = {
             'model': self.__modelname__,
-            'fit-success': self.fit_success,
-            'fit-method': method,
+            'success': self.fit_success,
+            'method': method,
             'statistic': self.statistic,
             'log_likelihood': self.loglik,
             'AIC': self.aic,

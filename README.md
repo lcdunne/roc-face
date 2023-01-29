@@ -1,43 +1,51 @@
 # Signal Detection
 
-Compute basic signal detection measures & fit theoretical recognition memory models to data. Measures include $d^\prime$ and $c$ (and others; see example 1). Supported models are high-threshold, equal- and unqeual-variance signal detection, and dual-process signal detection (example 2 shows the equal- and unequal-variance models).
+This is a Python package to compute basic signal detection theory measures and to fit theoretical recognition memory models to data using ROC curves. Signal detection measures include $d^\prime$ and $c$, among others.
 
-## Setting Up
+Currently-supported models are those most frequently seen in the literature: the High Threshold, the Equal- and the Unqeual-Variance Signal Detection, and the hybrid Dual-Process Signal Detection models. These models can be fit by minimising the $G$, $\chi^2$, log-likelihood, or sum of squared errors objective functions.
 
-The dependencies can be found in `requirements.txt` and this code needs them to run. I recommend using a virtual environment to isolate the dependencies from your base python installation (for more info [please see this](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/)).
+# Setting Up
+This package is not currently on PyPi, but will be soon. Once online:
+
+```$ pip install signal-detection```
+
+The dependencies can be found in the `requirements.txt` and this code needs them to run. I recommend using a virtual environment to isolate the dependencies from your base python installation (for more info [please see this](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/)).
 
 To install them, `cd` to the directory with this code in it, and then run `$ pip install -r requirements.txt`.
 
-## Example Usage
+# Usage
 
-### Example 1: Basic signal detection theory measures:
+## Example 1: Basic signal detection theory measures
+With a single true positive and false positive rate, compute the common measures of sensitivity and bias:
 
 ```python
->>> import measures as sdt
+>>> from signal_detection import measures
 
->>> sdt.d_prime(0.75, 0.21)
+>>> measures.d_prime(0.75, 0.21)
 1.480910997214322
 
->>> sdt.c_bias(0.75, 0.21)
+>>> measures.c_bias(0.75, 0.21)
 0.06596574841107933
-
->>> sdt.a_prime(0.75, 0.21)
-0.850886075949367
-
->>> sdt.beta(0.75, 0.21)
-0.9761153407498215
-
->>> sdt.beta_doubleprime(0.75, 0.21)
-0.06112054329371819
-
->>> sdt.beta_doubleprime(0.75, 0.21, donaldson=True)
-0.1126760563380282
+```
+You can also return a dictionary of measures in a similar way:
+```python
+>>> measures.compute_performance(tpr=0.75, fpr=0.21)
+{
+    'FPR': 0.21,
+    'TPR': 0.75,
+    'dprime': 1.480910997214322
+    'cbias': 0.06596574841107933,
+    'aprime': 0.850886075949367,
+    'beta': 1.1026202605581668,
+}
 ```
 
-### Example 2: Receiver operating characteristic (ROC) modelling:
+## Example 2: Receiver operating characteristic (ROC) modelling
+Given a set of responses to a set of signal and noise trials, the ROC and z-ROC plots of the observed frequencies can be viewed as follows.
 
 ```python
->>> from models import SignalDetection
+>>> import matplotlib.pyplot as plt
+>>> from signal_detection import utils
 
 # Strongest "signal" <---> Strongest "noise"
 # All responses to signal-present trials
@@ -46,119 +54,87 @@ To install them, `cd` to the directory with this code in it, and then run `$ pip
 # All responses to signal-absent (i.e. noise) trials
 >>> noise = [115,185,304,523,551,397]
 
-# Create an equal-variance signal detection model
->>> evsd = SignalDetection(signal, noise)
+>>> fig, ax = plt.subplots(1, 2)
+>>> utils.plot_roc(signal, noise, ax=ax[0])
+>>> utils.plot_zroc(signal, noise, poly=1, ax=ax[1])
+>>> ax[1].legend()
+>>> plt.show()
+```
+<img src="https://github.com/lcdunne/signal-detection/raw/develop/example/simple_ROC_zROC.png" alt="" width="620">
 
-# Create an unequal-variance signal detection model
+The line on the *z*-ROC in this example is a simple linear fit, which is useful 
+for interpreting the data.
+
+With the signal and noise data, the different models can be fitted.
+
+```python
+>>> from signal_detection.models import SignalDetection
+
+# Create an equal- and unequal-variance signal detection models
+>>> evsd = SignalDetection(signal, noise)
 >>> uvsd = SignalDetection(signal, noise, equal_variance=False)
 ```
 
-Once a model has been instantiated, we can view it in ROC space and see the AUC (note that the AUC corresponds to the observed data, rather than to any specific model, and is therefore identical for the `evsd` and `uvsd`). For example:
+After creation, the models are fit as follows:
 
 ```python
-# Utility plot function
-# not required - can just use standard matplotlib
->>> import matplotlib.pyplot as plt
->>> from utils import plot_roc
-
-# Plot the original datapoints
->>> plot_roc(signal, noise); plt.show()
-
->>> print(evsd.auc)
-0.7439343243677308
+# Fit the models using the G-test fit function
+>>> evsd.fit(verbose=True)
+(
+    {
+        'model': 'Equal Variance Signal Detection',
+        'success': True,
+        'method': 'G',
+        'statistic': 86.65649645461215,
+        'log_likelihood': -13560.04271197083,
+        'AIC': 27132.08542394166,
+        'BIC': 27171.729820697474,
+        'SSE': 0.0038210383584672968
+    },
+    {
+        'd': 1.3706692903039621,
+        'criteria': array([ 0.87497843,  0.40584089, -0.01393461, -0.48919362, -1.0589949 ])
+    }
+)
 ```
-<img src="https://github.com/lcdunne/signal-detection/raw/develop/example/simple_ROC.png" alt="" width="620">
-
-We can fit the two models (`evsd` and `uvsd`) as follows:
-
+Using `verbose=True` in the `fit` method prints out the results of the fitting procedure when it ends, along with the parameter estimates. After calling `fit`, they can be obtained with `.results` and `.parameter_estimates`:
 ```python
-# Fit the models using the G^2 fit function
->>> evsd.fit()
-{
-    'd': 1.020144525302289,
-    'criteria': array([ 0.94589698,  0.47680529,  0.01204417, -0.56213984, -1.28720496])
-}
-
 >>> uvsd.fit()
-{
-    'd': 1.1924959229611845,
-    'scale': 1.3447947556571425,
-    'criteria': array([ 1.03065803,  0.45976385, -0.06872691, -0.70004907, -1.46072399])
-}
-
-# Check the results
->>> print(evsd.results)
-{
-    'model': 'Equal Variance Signal Detection',
-    'fit-success': True,
-    'fit-method': 'G',
-    'statistic': 81.23108616253239,
-    'log_likelihood': -8721.468296830686,
-    'AIC': 17454.936593661372,
-    'BIC': 17491.835936927786,
-    'SSE': 0.0062687683639536295
-}
-
->>> print(uvsd.results)
+>>> uvsd.results
 {
     'model': 'Unequal Variance Signal Detection',
-    'fit-success': True,
-    'fit-method': 'G',
-    'statistic': 3.9020247244641175,
-    'log_likelihood': -8682.803766111652,
-    'AIC': 17379.607532223305,
-    'BIC': 17422.65676603412,
-    'SSE': 0.0009699101952450413
+    'success': True,
+    'method': 'G',
+    'statistic': 0.9957013337195149,
+    'log_likelihood': -13517.212314410383,
+    'AIC': 27048.424628820765,
+    'BIC': 27094.676425035883,
+    'SSE': 0.00014501577579512347
+}
+>>> uvsd.parameter_estimates
+{
+    'd': 1.6023922394537697,
+    'scale': 1.32284210876227,
+    'criteria': array([ 0.95984187,  0.36806527, -0.12572417, -0.65421799, -1.2496735 ])
 }
 ```
 
-They can also be compared statistically, since the $G^2$ statistic is approximately $\chi^2$ distributed. To accomplish this, we just need to (1) compute the *difference* in $G^2$ and (2) compute the *difference* in the degrees of freedom between the two models. This is possible using either the G-test or the $χ^2$ test statistics. These values can then be used to obtain a $p$ value:
-
+These models can also be compared to one another. Although it is common practice to compare with AIC or BIC (see the results), it can also be done with the `compare` method:
 ```python
->>> from scipy import stats
-
-# Get the difference in G-test values
->>> gdiff = evsd.results['statistic'] - uvsd.results['statistic']
-
-# Get the difference in the degrees of freedom for each model
->>> dofdiff = evsd.dof - uvsd.dof
-
-# Get a p value
->>> p = stats.chi2.sf(x=gdiff, df=dofdiff)
-
->>> print(f"G({dofdiff}) = {gdiff}, p = {p}")
-G(1) = 77.32906143806828, p = 1.4472085251058265e-18
+>>> evsd.compare(uvsd)
+('G(EVSD - UVSD)', 85.66079512089179, 1, 2.1360619666273588e-20)
 ```
+This shows that the UVSD provides a significantly better fit than the EVSD.
 
 Finally, we can just view the ROC data and the two fitted models, as follows:
 
 ```python
->>> from utils import plot_zroc
+>>> fig, ax = plt.subplots(dpi=120)
 
->>> fig, ax = plt.subplots(1, 2, dpi=150)
-
->>> ax[0].plot(
-        *evsd.compute_expected(evsd.fitted_parameters['d']),
-        label=evsd.label
-    )
-
->>> ax[0].plot(
-        *uvsd.compute_expected(
-            uvsd.fitted_parameters['d'],
-            uvsd.fitted_parameters['scale']
-        ),
-        label=uvsd.label
-    )
-
-# Plot the original datapoints
->>> plot_roc(signal, noise, c='k', ax=ax[0])
-
-# Plot z-ROC with second-order polynomial fit to the second subplot axis
->>> plot_zroc(signal, noise, reg=True, poly=2, c='k', ax=ax[1])
-
->>> ax[0].legend(loc='lower right')
-
->>> plt.tight_layout()
+>>> utils.plot_roc(signal, noise, c='k', ax=ax, label='data')
+>>> ax.plot(*evsd.curve, label='EVSD')
+>>> ax.plot(*uvsd.curve, label='UVSD')
+>>> ax.legend(loc='lower right')
 >>> plt.show()
 ```
 <img src="https://github.com/lcdunne/signal-detection/raw/develop/example/example_EVSD_UVSD.png" alt="" width="620">
