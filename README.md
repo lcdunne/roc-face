@@ -1,8 +1,14 @@
 # Signal Detection
 
-This is a Python package to compute basic signal detection theory measures and to fit theoretical recognition memory models to data using ROC curves. Signal detection measures include $d^\prime$ and $c$, among others.
+This is a Python package to compute basic signal detection theory measures and to fit theoretical recognition memory models to data using ROC curves.
 
-Currently-supported models are those most frequently seen in the literature: the High Threshold, the Equal- and the Unqeual-Variance Signal Detection, and the hybrid Dual-Process Signal Detection models. These models can be fit by minimising the $G$, $\chi^2$, log-likelihood, or sum of squared errors objective functions.
+Currently-supported models are those most frequently seen in the literature:
+- High Threshold
+- Equal-Variance Signal Detection
+- Unequal-Variance Signal Detection
+- Dual-Process Signal Detection
+
+These models are fit to observed data by minimising the $G$, $\chi^2$, log-likelihood, or sum of squared error statistics between observed and model-predicted data.
 
 # Setting Up
 This package is not currently on PyPi, but will be soon. Once online:
