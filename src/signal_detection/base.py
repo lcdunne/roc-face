@@ -427,7 +427,8 @@ class _BaseModel:
         self.statistic = self.optimisation_output.fun
         self.fit_success = self.optimisation_output.success
         if not self.fit_success:
-            print(f"Fit failed for {self.__modelname__} model.")
+            # TODO: decide if we need to exit func here.
+            warnings.warn(f"Fit failed for {self.__modelname__} model.")
 
         # Define the model inputs as kwargs for the model's `compute_expected` method        
         self._parameter_estimates = self.define_model_inputs(
