@@ -336,3 +336,58 @@ def auc(x: array_like, y: array_like) -> float:
 
     """
     return np.trapz(x=x, y=y)
+
+def plot_performance(
+        dprime: float,
+        scale: float=1,
+        ax: Optional[Axes]=None,
+        shade: bool=False,
+        noise_kwargs: dict={'c': 'k'},
+        signal_kwargs: dict={}
+    ):
+    """Plot a signal & noise distribution for a specific value of d`.
+    
+    Parameters
+    ----------
+    dprime : float
+        Sensitivity index.
+    scale : float, optional
+        The standard deviation of the signal distribution. The default is 1.
+    ax : Optional[Axes], optional
+        Matplotlib Axes object to plot to, if already defined. The default is 
+        None.
+    shade : bool, optional
+        Whether to shade the distributions. The default is False.
+    noise_kwargs : dict, optional
+        Keyword arguments (see matplotlib.pyplot.plot) for the noise 
+        distribution. The default is {'c': 'k'}.
+    signal_kwargs : dict, optional
+        Keyword arguments (see matplotlib.pyplot.plot) for the signal 
+        distribution. The default is {}.
+
+    Returns
+    -------
+    ax : Axes
+        A matplotlib Axes object displaying the signal & noise distributions 
+        for the specified value of d`.
+
+    """
+    strength = np.linspace(-4, 4+dprime*scale, 1000)    
+    noisedist = stats.norm.pdf(strength, loc=0, scale=1)
+    signaldist = stats.norm.pdf(strength, loc=dprime, scale=scale)
+    
+    if ax is None:
+        fig, ax = plt.subplots()
+    
+    ax.plot(strength, noisedist, label='noise', **noise_kwargs)
+    noise_clr = plt.gca().lines[-1].get_color()
+    ax.plot(strength, signaldist, label='signal', **signal_kwargs)
+    signal_clr = plt.gca().lines[-1].get_color()
+    plt.gca().lines[-1].get_linewidth()
+    
+    if shade:
+        ax.fill_between(strength, noisedist, color=noise_clr, alpha=1/3)
+        ax.fill_between(strength, signaldist, color=signal_clr, alpha=1/3)
+    
+    ax.set(yticklabels=[], yticks=[])
+    return ax
