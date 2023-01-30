@@ -1,7 +1,7 @@
 import json
 import matplotlib.pyplot as plt
-from signal_detection import utils
-from signal_detection.models import HighThreshold, SignalDetection, DualProcess
+from roc_face import utils
+from roc_face.models import HighThreshold, SignalDetection, DualProcess
 
 
 def load_example_data(dataset_name):
