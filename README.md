@@ -11,13 +11,11 @@ Currently-supported models are those most frequently seen in the literature:
 These models are fit to observed data by minimising the $G$, $\chi^2$, log-likelihood, or sum of squared error statistics between observed and model-predicted data.
 
 # Setting Up
-This package is not currently on PyPi, but will be soon. Once online:
+Install with `pip`:
 
 ```$ pip install roc-face```
 
-The dependencies can be found in the `requirements.txt` and this code needs them to run. I recommend using a virtual environment to isolate the dependencies from your base python installation (for more info [please see this](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/)).
-
-To install them, `cd` to the directory with this code in it, and then run `$ pip install -r requirements.txt`.
+It is generally recommend to use a virtual environment when installing python packages ([see here](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/)).
 
 # Usage
 
