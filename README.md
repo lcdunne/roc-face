@@ -25,7 +25,7 @@ To install them, `cd` to the directory with this code in it, and then run `$ pip
 With a single true positive and false positive rate, compute the common measures of sensitivity and bias:
 
 ```python
->>> from signal_detection import measures
+>>> from roc_face import measures
 
 >>> measures.d_prime(0.75, 0.21)
 1.480910997214322
@@ -51,7 +51,7 @@ Given a set of responses to a set of signal and noise trials, the ROC and z-ROC 
 
 ```python
 >>> import matplotlib.pyplot as plt
->>> from signal_detection import utils
+>>> from roc_face import utils
 
 # Strongest "signal" <---> Strongest "noise"
 # All responses to signal-present trials
@@ -76,7 +76,7 @@ which is useful for interpreting the ROC data.
 With the signal and noise data, the different models can be fitted.
 
 ```python
->>> from signal_detection.models import SignalDetection
+>>> from roc_face.models import SignalDetection
 
 # Create an equal- and unequal-variance signal detection models
 >>> evsd = SignalDetection(signal, noise)
