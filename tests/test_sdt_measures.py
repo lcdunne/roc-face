@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from signal_detection import measures
+from roc_face import measures
 from .context import datasets
 
 @pytest.mark.parametrize('tpr,fpr,expected', [(0.80, 0.40, 1.095), (0.32, 0.04, 1.283), (0.36, 0.36, 0), (.95, .2, 2.486)])

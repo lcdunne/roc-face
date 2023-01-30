@@ -1,6 +1,6 @@
 import json
 import os
-from signal_detection import models, utils
+from roc_face import models, utils
 
 with open('example/example_data.json', 'r') as f:
     datasets = json.load(f)

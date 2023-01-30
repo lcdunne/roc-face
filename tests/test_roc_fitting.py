@@ -1,7 +1,7 @@
 import numpy as np
 from itertools import product
 import pytest
-from signal_detection import utils, models
+from roc_face import utils, models
 from .context import datasets
 
 def uvsd_model(signal, noise):
