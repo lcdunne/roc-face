@@ -1,4 +1,4 @@
-# Signal Detection
+# ROC Face
 
 This is a Python package to compute basic signal detection theory measures and to fit theoretical recognition memory models to data using ROC curves.
 
@@ -13,7 +13,7 @@ These models are fit to observed data by minimising the $G$, $\chi^2$, log-likel
 # Setting Up
 This package is not currently on PyPi, but will be soon. Once online:
 
-```$ pip install signal-detection```
+```$ pip install roc-face```
 
 The dependencies can be found in the `requirements.txt` and this code needs them to run. I recommend using a virtual environment to isolate the dependencies from your base python installation (for more info [please see this](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/)).
 

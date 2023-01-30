@@ -2,9 +2,9 @@ import numpy as np
 from scipy import stats
 from scipy.optimize import minimize
 import warnings
-from signal_detection import measures
-from signal_detection.utils import *
-from signal_detection.fit_functions import log_likelihood, squared_errors, aic, bic
+from roc_face import measures
+from roc_face.utils import *
+from roc_face.fit_functions import log_likelihood, squared_errors, aic, bic
 
 
 class ResponseData:

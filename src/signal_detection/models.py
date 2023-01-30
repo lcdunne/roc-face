@@ -2,8 +2,8 @@ import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 from typing import Union, Optional
-from signal_detection.base import _BaseModel
-from signal_detection.utils import plot_roc, array_like
+from roc_face.base import _BaseModel
+from roc_face.utils import plot_roc, array_like
 
 class HighThreshold(_BaseModel):
     """High Threshold model class. Inherits functionality from _BaseModel class.
