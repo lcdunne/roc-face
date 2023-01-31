@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "roc_face"
-version = "0.1.0"
+version = "0.1.1"
 description = "A package to fit models to recognition memory ROC data and compute signal detection measures."
 keywords = ["signal detection theory", "receiver operating characteristics", "ROC", "psychology"]
 authors = [{name = "Lewis Dunne"}]
