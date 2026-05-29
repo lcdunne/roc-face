@@ -1,8 +1,16 @@
 # ROC Face
 
+---
+
+> [!WARNING]
+> This project is now archived. See [Kriterion](https://github.com/lcdunne/kriterion) instead, which is the successor.
+
+---
+
 This is a Python package to compute basic signal detection theory measures and to fit theoretical recognition memory models to data using ROC curves.
 
 Currently-supported models are those most frequently seen in the literature:
+
 - High Threshold
 - Equal-Variance Signal Detection
 - Unequal-Variance Signal Detection
@@ -11,15 +19,17 @@ Currently-supported models are those most frequently seen in the literature:
 These models are fit to observed data by minimising the $G$, $\chi^2$, log-likelihood, or sum of squared error statistics between observed and model-predicted data.
 
 # Setting Up
+
 Install with `pip`:
 
-```$ pip install roc-face```
+`$ pip install roc-face`
 
 It is generally recommend to use a virtual environment when installing python packages ([see here](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/)).
 
 # Usage
 
 ## Example 1: Basic signal detection theory measures
+
 With a single true positive and false positive rate, compute the common measures of sensitivity and bias:
 
 ```python
@@ -31,7 +41,9 @@ With a single true positive and false positive rate, compute the common measures
 >>> measures.c_bias(0.75, 0.21)
 0.06596574841107933
 ```
+
 You can also return a dictionary of measures in a similar way:
+
 ```python
 >>> measures.compute_performance(tpr=0.75, fpr=0.21)
 {
@@ -45,6 +57,7 @@ You can also return a dictionary of measures in a similar way:
 ```
 
 ## Example 2: Receiver operating characteristic (ROC) modelling
+
 Given a set of responses to a set of signal and noise trials, the ROC and z-ROC plots of the observed frequencies can be viewed as follows.
 
 ```python
@@ -64,11 +77,12 @@ Given a set of responses to a set of signal and noise trials, the ROC and z-ROC 
 >>> ax[1].legend()
 >>> plt.show()
 ```
+
 <img src="https://github.com/lcdunne/signal-detection/raw/develop/example/example_ROC_zROC.png" alt="" width="620">
 
-The `utils.plot_roc` and `utils.plot_zroc` functions are for convenience as 
-they carry out some minor plotting customisations (square axes, chance-line, 
-etc). The fitted line on the *z*-ROC in this example is a simple linear model, 
+The `utils.plot_roc` and `utils.plot_zroc` functions are for convenience as
+they carry out some minor plotting customisations (square axes, chance-line,
+etc). The fitted line on the _z_-ROC in this example is a simple linear model,
 which is useful for interpreting the ROC data.
 
 With the signal and noise data, the different models can be fitted.
@@ -103,7 +117,9 @@ After creation, the models are fit as follows:
     }
 )
 ```
+
 Using `verbose=True` in the `fit` method prints out the results of the fitting procedure when it ends, along with the parameter estimates. After calling `fit`, they can also be accessed via `.results` and `.parameter_estimates`:
+
 ```python
 >>> uvsd.fit()
 >>> uvsd.results
@@ -126,10 +142,12 @@ Using `verbose=True` in the `fit` method prints out the results of the fitting p
 ```
 
 These models can also be compared to one another. Although it is common practice to compare with the AIC or BIC values (see the results), it can also be done with the `.compare` method:
+
 ```python
 >>> evsd.compare(uvsd)
 ('G(EVSD - UVSD)', 85.66079512089179, 1, 2.1360619666273588e-20)
 ```
+
 This shows that the UVSD provides a significantly better fit than the EVSD.
 
 Finally, we can just view the ROC data and the two fitted models as follows:
@@ -142,4 +160,5 @@ Finally, we can just view the ROC data and the two fitted models as follows:
 >>> ax.legend(loc='lower right')
 >>> plt.show()
 ```
+
 <img src="https://github.com/lcdunne/signal-detection/raw/develop/example/example_EVSD_UVSD.png" alt="" width="480">
